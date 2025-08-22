@@ -221,6 +221,96 @@ class FileExplorerManager: ObservableObject {
     func deselectAll() {
         selectedItems.removeAll()
     }
+    
+    // MARK: - Clipboard Operations
+    
+    func copySelectedItems() {
+        guard !selectedItems.isEmpty else { return }
+        ClipboardManager.shared.copyItems(Array(selectedItems))
+    }
+    
+    func cutSelectedItems() {
+        guard !selectedItems.isEmpty else { return }
+        ClipboardManager.shared.cutItems(Array(selectedItems))
+    }
+    
+    func pasteItems() {
+        ClipboardManager.shared.pasteItems(to: currentURL) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    self.refresh()
+                case .failure(let error):
+                    self.errorMessage = "Paste failed: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+    
+    var canPaste: Bool {
+        ClipboardManager.shared.canPaste
+    }
+    
+    // MARK: - Keyboard Shortcuts
+    
+    func handleKeyboardShortcut(_ key: String, modifiers: EventModifiers) -> Bool {
+        if modifiers.contains(.command) {
+            switch key.lowercased() {
+            case "c":
+                copySelectedItems()
+                return true
+            case "x":
+                cutSelectedItems()
+                return true
+            case "v":
+                if canPaste {
+                    pasteItems()
+                }
+                return true
+            case "a":
+                selectAll()
+                return true
+            case "f":
+                // Will be handled by search view
+                return false
+            default:
+                return false
+            }
+        }
+        
+        switch key {
+        case "Delete", "Backspace", "\u{7F}":
+            moveSelectedItemsToTrash()
+            return true
+        case "Return", "Enter":
+            if selectedItems.count == 1 {
+                openItem(selectedItems.first!)
+                return true
+            }
+        default:
+            return false
+        }
+        
+        return false
+    }
+    
+    func deleteSelectedItems() {
+        moveSelectedItemsToTrash()
+    }
+    
+    private func moveSelectedItemsToTrash() {
+        guard !selectedItems.isEmpty else { return }
+        
+        for item in selectedItems {
+            do {
+                try FileManager.default.trashItem(at: item.url, resultingItemURL: nil)
+            } catch {
+                errorMessage = "Failed to move item to trash: \(error.localizedDescription)"
+            }
+        }
+        selectedItems.removeAll()
+        refresh()
+    }
 }
 
 enum SortOption: String, CaseIterable {

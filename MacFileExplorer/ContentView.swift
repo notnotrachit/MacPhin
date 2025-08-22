@@ -51,22 +51,26 @@ struct SingleWindowContentView: View {
                     Image(systemName: "chevron.left")
                 }
                 .disabled(!fileManager.canGoBack)
+                .help("Back")
                 
                 Button(action: { fileManager.goForward() }) {
                     Image(systemName: "chevron.right")
                 }
                 .disabled(!fileManager.canGoForward)
+                .help("Forward")
                 
                 Button(action: { fileManager.goUp() }) {
                     Image(systemName: "chevron.up")
                 }
                 .disabled(!fileManager.canGoUp)
+                .help("Up")
             }
             
             ToolbarItemGroup(placement: .primaryAction) {
                 Button(action: { fileManager.refresh() }) {
                     Image(systemName: "arrow.clockwise")
                 }
+                .help("Refresh")
                 
                 Menu {
                     Button("List") { fileManager.viewMode = .list }
@@ -75,6 +79,29 @@ struct SingleWindowContentView: View {
                 } label: {
                     Image(systemName: "square.grid.2x2")
                 }
+                .help("View Options")
+                
+                // Clipboard operations
+                Button(action: { fileManager.copySelectedItems() }) {
+                    Image(systemName: "doc.on.doc")
+                }
+                .disabled(fileManager.selectedItems.isEmpty)
+                .keyboardShortcut("c", modifiers: .command)
+                .help("Copy (⌘C)")
+                
+                Button(action: { fileManager.cutSelectedItems() }) {
+                    Image(systemName: "scissors")
+                }
+                .disabled(fileManager.selectedItems.isEmpty)
+                .keyboardShortcut("x", modifiers: .command)
+                .help("Cut (⌘X)")
+                
+                Button(action: { fileManager.pasteItems() }) {
+                    Image(systemName: "doc.on.clipboard")
+                }
+                .disabled(!fileManager.canPaste)
+                .keyboardShortcut("v", modifiers: .command)
+                .help("Paste (⌘V)")
             }
         }
     }

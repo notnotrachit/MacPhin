@@ -3,11 +3,21 @@ import SwiftUI
 struct FileExplorerView: View {
     @ObservedObject var fileManager: FileExplorerManager
     let selectedSidebarItem: SidebarItem?
+    @State private var showingSearch = false
     
     var body: some View {
         VStack(spacing: 0) {
-            // Address bar
-            AddressBarView(fileManager: fileManager)
+            // Address bar and search
+            VStack(spacing: 0) {
+                AddressBarView(fileManager: fileManager)
+                
+                if showingSearch {
+                    Divider()
+                    GlobalSearchView(fileManager: fileManager)
+                        .frame(height: 300)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
             
             Divider()
             
@@ -45,7 +55,47 @@ struct FileExplorerView: View {
             }
         }
         .navigationTitle(fileManager.currentURL.lastPathComponent.isEmpty ? "Root" : fileManager.currentURL.lastPathComponent)
+        .focusable()
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        showingSearch.toggle()
+                    }
+                }) {
+                    Image(systemName: showingSearch ? "xmark" : "magnifyingglass")
+                }
+                .keyboardShortcut("f", modifiers: .command)
+                .help("Search (⌘F)")
+            }
+            
+            // Hidden buttons for keyboard shortcuts
+            ToolbarItemGroup(placement: .automatic) {
+                Button("Copy") { fileManager.copySelectedItems() }
+                    .keyboardShortcut("c", modifiers: .command)
+                    .hidden()
+                
+                Button("Cut") { fileManager.cutSelectedItems() }
+                    .keyboardShortcut("x", modifiers: .command)
+                    .hidden()
+                
+                Button("Paste") { fileManager.pasteItems() }
+                    .keyboardShortcut("v", modifiers: .command)
+                    .hidden()
+                
+                Button("Select All") { fileManager.selectAll() }
+                    .keyboardShortcut("a", modifiers: .command)
+                    .hidden()
+                
+                Button("Delete") { 
+                    fileManager.deleteSelectedItems()
+                }
+                .keyboardShortcut(.delete)
+                .hidden()
+            }
+        }
     }
+    
 }
 
 struct AddressBarView: View {

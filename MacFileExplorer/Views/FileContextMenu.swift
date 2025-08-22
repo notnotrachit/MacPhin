@@ -23,18 +23,34 @@ struct FileContextMenu: View {
                 Divider()
                 
                 Button("Copy") {
-                    copySelectedItems()
+                    fileManager.copySelectedItems()
                 }
+                .keyboardShortcut("c", modifiers: .command)
+                
+                Button("Cut") {
+                    fileManager.cutSelectedItems()
+                }
+                .keyboardShortcut("x", modifiers: .command)
                 
                 Button("Move to Trash") {
                     moveSelectedItemsToTrash()
                 }
+                .keyboardShortcut(.delete)
                 
                 Divider()
                 
                 Button("Get Info") {
                     showInfoForSelectedItems()
                 }
+            }
+            
+            if fileManager.canPaste {
+                Button("Paste") {
+                    fileManager.pasteItems()
+                }
+                .keyboardShortcut("v", modifiers: .command)
+                
+                Divider()
             }
             
             Button("New Folder") {
