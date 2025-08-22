@@ -3,6 +3,7 @@ import SwiftUI
 struct SidebarView: View {
     @Binding var selectedItem: SidebarItem?
     var fileManager: FileExplorerManager?
+    @FocusState private var isFocused: Bool
     
     var body: some View {
         List(selection: $selectedItem) {
@@ -26,6 +27,7 @@ struct SidebarView: View {
             }
         }
         .listStyle(SidebarListStyle())
+        .focused($isFocused)
         .onChange(of: selectedItem) { newValue in
             if let item = newValue, let fileManager = fileManager {
                 fileManager.navigateTo(item.url)

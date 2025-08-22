@@ -6,11 +6,13 @@ A Windows File Explorer-like application for macOS built with SwiftUI.
 
 - **Multiple View Modes**: List, Icons, and Columns view (similar to Windows Explorer)
 - **Sidebar Navigation**: Quick access to common folders (Home, Desktop, Documents, Downloads, etc.)
+- **Full Keyboard Navigation**: Complete keyboard control with arrow keys, shortcuts, and focus management
 - **File Operations**: 
   - Open files with default applications
   - Create new folders
   - Move files to trash
-  - Copy files to clipboard
+  - Copy/Cut/Paste files
+  - Duplicate files
   - Show file info
 - **Navigation**: 
   - Back/Forward navigation history
@@ -19,8 +21,9 @@ A Windows File Explorer-like application for macOS built with SwiftUI.
 - **Sorting**: Sort by name, size, date modified, or file type
 - **Search**: Search for files and folders within the current directory
 - **Context Menus**: Right-click context menus with file operations
-- **File Selection**: Single and multiple file selection
+- **File Selection**: Single and multiple file selection with keyboard support
 - **Hidden Files**: Toggle visibility of hidden files
+- **Tabbed Interface**: Multiple tabs for efficient file management
 
 ## Requirements
 
@@ -91,6 +94,54 @@ Sources/MacFileExplorer/
 - Use Cmd+F or the search functionality to find files
 - Search is performed recursively in the current directory
 
+### Keyboard Navigation
+The file manager is fully navigable using keyboard shortcuts:
+
+#### Navigation
+- **↑/↓ Arrow Keys**: Move selection up/down in file list
+- **←/→ Arrow Keys**: Switch between sidebar and file list
+- **Enter**: Open selected item
+- **Space**: Toggle selection of current item
+- **Shift + ↑/↓**: Extend selection
+- **Tab**: Move focus between UI elements
+- **Shift + Tab**: Move focus backwards
+- **Escape**: Clear selection
+
+#### File Operations
+- **⌘ + C**: Copy selected items
+- **⌘ + X**: Cut selected items  
+- **⌘ + V**: Paste items
+- **⌘ + A**: Select all items
+- **⌘ + N**: Create new folder
+- **⌘ + D**: Duplicate selected items
+- **Delete**: Move selected items to trash
+
+#### View Controls
+- **⌘ + 1**: Switch to List view
+- **⌘ + 2**: Switch to Icon view
+- **⌘ + 3**: Switch to Column view
+- **⌘ + R**: Refresh current folder
+- **⌘ + Shift + H**: Toggle hidden files
+
+#### Navigation Shortcuts
+- **⌘ + ↑**: Go to parent folder
+- **⌘ + ←**: Go back in history
+- **⌘ + →**: Go forward in history
+
+#### Search
+- **⌘ + F**: Open/close search
+- **⌘ + Shift + F**: Global search
+
+#### Tab Management
+- **⌘ + T**: New tab
+- **⌘ + W**: Close current tab
+- **⌘ + 1-9**: Switch to tab by number
+
+#### Quick Actions
+- **⌘ + Shift + C**: Copy file path to clipboard
+- **⌘ + Shift + R**: Reveal in Finder
+- **⌘ + ?**: Show keyboard shortcuts help
+
 ## Customization
 
 The application can be easily customized by modifying:
@@ -113,10 +164,11 @@ The application can be easily customized by modifying:
 - Content-based search
 - Network location support
 - File operation progress indicators
-- Drag and drop support
-- Keyboard shortcuts
+- Enhanced drag and drop support
 - Customizable toolbar
 - File tags and labels support
+- Quick Look integration
+- Advanced search filters
 
 ## License
 

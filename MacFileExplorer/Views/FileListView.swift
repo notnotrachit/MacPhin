@@ -61,12 +61,18 @@ struct FileListView: View {
             .border(Color(NSColor.separatorColor), width: 0.5)
             
             // File list
-            List(fileManager.displayItems, id: \.id, selection: Binding(
-                get: { fileManager.selectedItems },
-                set: { fileManager.selectedItems = $0 }
-            )) { item in
-                FileListRowView(item: item, fileManager: fileManager)
-                    .listRowInsets(EdgeInsets(top: 2, leading: 8, bottom: 2, trailing: 8))
+            List(fileManager.displayItems.indices, id: \.self) { index in
+                let item = fileManager.displayItems[index]
+                FileListRowView(
+                    item: item, 
+                    fileManager: fileManager,
+                    isKeyboardSelected: fileManager.keyboardSelectedIndex == index && fileManager.focusedField == .fileList
+                )
+                .listRowInsets(EdgeInsets(top: 2, leading: 8, bottom: 2, trailing: 8))
+                .background(
+                    fileManager.keyboardSelectedIndex == index && fileManager.focusedField == .fileList ?
+                    Color.accentColor.opacity(0.1) : Color.clear
+                )
             }
             .listStyle(.plain)
             .contextMenu {
@@ -79,6 +85,7 @@ struct FileListView: View {
 struct FileListRowView: View {
     let item: FileItem
     @ObservedObject var fileManager: FileExplorerManager
+    let isKeyboardSelected: Bool
     
     var body: some View {
         DraggableFileView(item: item) {
@@ -126,7 +133,13 @@ struct FileListRowView: View {
             }
             .background(
                 fileManager.selectedItems.contains(item) ? 
-                Color.accentColor.opacity(0.3) : Color.clear
+                Color.accentColor.opacity(0.3) : 
+                isKeyboardSelected ? Color.accentColor.opacity(0.1) : Color.clear
+            )
+            .overlay(
+                isKeyboardSelected ? 
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(Color.accentColor, lineWidth: 2) : nil
             )
             .cornerRadius(4)
         }

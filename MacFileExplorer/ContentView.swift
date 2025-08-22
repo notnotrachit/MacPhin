@@ -143,6 +143,42 @@ struct SingleWindowContentView: View {
                 .disabled(!fileManager.canPaste)
                 .keyboardShortcut("v", modifiers: .command)
                 .help("Paste (⌘V)")
+                
+                // Additional keyboard shortcuts (hidden buttons)
+                Button("New Folder") { fileManager.createNewFolder() }
+                    .keyboardShortcut("n", modifiers: .command)
+                    .hidden()
+                
+                Button("Duplicate") { fileManager.duplicateSelectedItems() }
+                    .keyboardShortcut("d", modifiers: .command)
+                    .hidden()
+                
+                Button("List View") { fileManager.viewMode = .list }
+                    .keyboardShortcut("1", modifiers: .command)
+                    .hidden()
+                
+                Button("Icon View") { fileManager.viewMode = .icons }
+                    .keyboardShortcut("2", modifiers: .command)
+                    .hidden()
+                
+                Button("Column View") { fileManager.viewMode = .columns }
+                    .keyboardShortcut("3", modifiers: .command)
+                    .hidden()
+                
+                Button("Toggle Hidden") { 
+                    fileManager.showHiddenFiles.toggle()
+                    fileManager.loadItems()
+                }
+                .keyboardShortcut("h", modifiers: [.command, .shift])
+                .hidden()
+                
+                Button("Copy Path") { fileManager.copyPathToClipboard() }
+                    .keyboardShortcut("c", modifiers: [.command, .shift])
+                    .hidden()
+                
+                Button("Reveal in Finder") { fileManager.revealInFinder() }
+                    .keyboardShortcut("r", modifiers: [.command, .shift])
+                    .hidden()
             }
         }
     }

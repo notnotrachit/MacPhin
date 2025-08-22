@@ -1,6 +1,39 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Focus Management
+enum FocusedField: Hashable {
+    case sidebar
+    case fileList
+    case searchBar
+    case addressBar
+}
+
+// MARK: - Search Result Types
+struct SearchResultItem {
+    let fileItem: FileItem
+    let relevanceScore: Double
+    let matchType: MatchType
+}
+
+enum MatchType {
+    case exactMatch
+    case prefixMatch
+    case containsMatch
+    case fuzzyMatch
+    case extensionMatch
+    
+    var priority: Int {
+        switch self {
+        case .exactMatch: return 5
+        case .prefixMatch: return 4
+        case .containsMatch: return 3
+        case .extensionMatch: return 2
+        case .fuzzyMatch: return 1
+        }
+    }
+}
+
 class FileExplorerManager: ObservableObject {
     @Published var currentURL: URL
     @Published var items: [FileItem] = []
@@ -16,6 +49,13 @@ class FileExplorerManager: ObservableObject {
     @Published var searchResults: [FileItem] = []
     @Published var isInSearchMode = false
     @Published var searchScope: SearchScope = .currentFolder
+    
+    // Keyboard navigation properties
+    @Published var focusedField: FocusedField? = .fileList
+    @Published var keyboardSelectedIndex: Int = 0
+    
+    // Search debouncing
+    private var searchTask: Task<Void, Never>?
     
     private var navigationHistory: [URL] = []
     private var currentHistoryIndex = -1
@@ -36,6 +76,79 @@ class FileExplorerManager: ObservableObject {
     init() {
         self.currentURL = fileManager.homeDirectoryForCurrentUser
         loadItems()
+    }
+    
+    // MARK: - Keyboard Navigation Methods
+    
+    func moveSelectionUp() {
+        let items = displayItems
+        guard !items.isEmpty else { return }
+        
+        if keyboardSelectedIndex > 0 {
+            keyboardSelectedIndex -= 1
+            selectKeyboardItem()
+        }
+    }
+    
+    func moveSelectionDown() {
+        let items = displayItems
+        guard !items.isEmpty else { return }
+        
+        if keyboardSelectedIndex < items.count - 1 {
+            keyboardSelectedIndex += 1
+            selectKeyboardItem()
+        }
+    }
+    
+    func selectKeyboardItem() {
+        let items = displayItems
+        guard keyboardSelectedIndex < items.count else { return }
+        
+        let item = items[keyboardSelectedIndex]
+        selectedItems = [item]
+    }
+    
+    func openKeyboardSelectedItem() {
+        let items = displayItems
+        guard keyboardSelectedIndex < items.count else { return }
+        
+        let item = items[keyboardSelectedIndex]
+        openItem(item)
+    }
+    
+    func toggleKeyboardSelection() {
+        let items = displayItems
+        guard keyboardSelectedIndex < items.count else { return }
+        
+        let item = items[keyboardSelectedIndex]
+        selectItem(item)
+    }
+    
+    func selectRange(to index: Int) {
+        let items = displayItems
+        let startIndex = min(keyboardSelectedIndex, index)
+        let endIndex = max(keyboardSelectedIndex, index)
+        
+        let selectedItems = Set(items[startIndex...endIndex])
+        self.selectedItems = selectedItems
+    }
+    
+    func updateKeyboardSelectedIndex() {
+        let items = displayItems
+        
+        // Ensure selected index is within bounds
+        keyboardSelectedIndex = min(keyboardSelectedIndex, max(0, items.count - 1))
+        
+        // If there's a selection, try to maintain it
+        if let firstSelected = selectedItems.first,
+           let index = items.firstIndex(of: firstSelected) {
+            keyboardSelectedIndex = index
+        }
+    }
+    
+    func resetKeyboardSelection() {
+        keyboardSelectedIndex = 0
+        selectKeyboardItem()
     }
     
     
@@ -256,6 +369,116 @@ class FileExplorerManager: ObservableObject {
         ClipboardManager.shared.canPaste
     }
     
+    // MARK: - Keyboard Event Handling
+    
+    func handleKeyPress(_ key: String, modifiers: EventModifiers) -> Bool {
+        // Handle arrow keys for navigation
+        switch key {
+        case "Up":
+            if modifiers.contains(.shift) {
+                let newIndex = max(0, keyboardSelectedIndex - 1)
+                selectRange(to: newIndex)
+                keyboardSelectedIndex = newIndex
+            } else {
+                moveSelectionUp()
+            }
+            return true
+            
+        case "Down":
+            if modifiers.contains(.shift) {
+                let items = displayItems
+                let newIndex = min(items.count - 1, keyboardSelectedIndex + 1)
+                selectRange(to: newIndex)
+                keyboardSelectedIndex = newIndex
+            } else {
+                moveSelectionDown()
+            }
+            return true
+            
+        case "Left":
+            if focusedField == .fileList && !modifiers.contains(.command) {
+                focusedField = .sidebar
+                return true
+            }
+            return false
+            
+        case "Right":
+            if focusedField == .sidebar {
+                focusedField = .fileList
+                return true
+            } else if focusedField == .fileList && isInSearchMode {
+                focusedField = .searchBar
+                return true
+            }
+            return false
+            
+        case "Return", "Enter":
+            if focusedField == .fileList {
+                openKeyboardSelectedItem()
+                return true
+            }
+            return false
+            
+        case "Space":
+            if focusedField == .fileList {
+                toggleKeyboardSelection()
+                return true
+            }
+            return false
+            
+        case "Tab":
+            if modifiers.contains(.shift) {
+                moveFocusPrevious()
+            } else {
+                moveFocusNext()
+            }
+            return true
+            
+        case "Escape":
+            deselectAll()
+            return true
+            
+        default:
+            break
+        }
+        
+        return handleKeyboardShortcut(key, modifiers: modifiers)
+    }
+    
+    func moveFocusNext() {
+        switch focusedField {
+        case .sidebar:
+            focusedField = .fileList
+        case .fileList:
+            if isInSearchMode {
+                focusedField = .searchBar
+            } else {
+                focusedField = .sidebar
+            }
+        case .searchBar:
+            focusedField = .addressBar
+        case .addressBar:
+            focusedField = .sidebar
+        case .none:
+            focusedField = .fileList
+        }
+    }
+    
+    func moveFocusPrevious() {
+        switch focusedField {
+        case .sidebar:
+            focusedField = .addressBar
+        case .fileList:
+            focusedField = .sidebar
+        case .searchBar:
+            focusedField = .fileList
+        case .addressBar:
+            focusedField = .searchBar
+        case .none:
+            focusedField = .fileList
+        }
+    }
+    
     // MARK: - Keyboard Shortcuts
     
     func handleKeyboardShortcut(_ key: String, modifiers: EventModifiers) -> Bool {
@@ -278,6 +501,47 @@ class FileExplorerManager: ObservableObject {
             case "f":
                 // Will be handled by search view
                 return false
+            case "r":
+                refresh()
+                return true
+            case "h":
+                if modifiers.contains(.shift) {
+                    showHiddenFiles.toggle()
+                    loadItems()
+                    return true
+                }
+                return false
+            case "1":
+                viewMode = .list
+                return true
+            case "2":
+                viewMode = .icons
+                return true
+            case "3":
+                viewMode = .columns
+                return true
+            case "n":
+                createNewFolder()
+                return true
+            case "d":
+                duplicateSelectedItems()
+                return true
+            default:
+                return false
+            }
+        }
+        
+        if modifiers.contains(.command) && modifiers.contains(.shift) {
+            switch key.lowercased() {
+            case "c":
+                copyPathToClipboard()
+                return true
+            case "r":
+                revealInFinder()
+                return true
+            case "g":
+                // Go to folder - would need UI implementation
+                return false
             default:
                 return false
             }
@@ -299,6 +563,76 @@ class FileExplorerManager: ObservableObject {
         return false
     }
     
+    // MARK: - Additional Operations
+    
+    func createNewFolder() {
+        let newFolderName = "New Folder"
+        var finalName = newFolderName
+        var counter = 1
+        
+        // Find unique name
+        while fileManager.fileExists(atPath: currentURL.appendingPathComponent(finalName).path) {
+            finalName = "\(newFolderName) \(counter)"
+            counter += 1
+        }
+        
+        let newFolderURL = currentURL.appendingPathComponent(finalName)
+        
+        do {
+            try fileManager.createDirectory(at: newFolderURL, withIntermediateDirectories: false)
+            refresh()
+        } catch {
+            errorMessage = "Failed to create folder: \(error.localizedDescription)"
+        }
+    }
+    
+    func duplicateSelectedItems() {
+        guard !selectedItems.isEmpty else { return }
+        
+        for item in selectedItems {
+            let originalURL = item.url
+            let fileName = originalURL.lastPathComponent
+            let fileExtension = originalURL.pathExtension
+            let baseName = fileName.replacingOccurrences(of: ".\(fileExtension)", with: "")
+            
+            var duplicateName = fileName.isEmpty ? "Copy of \(baseName)" : "Copy of \(baseName).\(fileExtension)"
+            var counter = 1
+            
+            // Find unique name
+            while fileManager.fileExists(atPath: currentURL.appendingPathComponent(duplicateName).path) {
+                if fileExtension.isEmpty {
+                    duplicateName = "Copy \(counter) of \(baseName)"
+                } else {
+                    duplicateName = "Copy \(counter) of \(baseName).\(fileExtension)"
+                }
+                counter += 1
+            }
+            
+            let duplicateURL = currentURL.appendingPathComponent(duplicateName)
+            
+            do {
+                try fileManager.copyItem(at: originalURL, to: duplicateURL)
+            } catch {
+                errorMessage = "Failed to duplicate \(fileName): \(error.localizedDescription)"
+            }
+        }
+        
+        refresh()
+    }
+    
+    func copyPathToClipboard() {
+        guard let firstSelected = selectedItems.first else { return }
+        
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(firstSelected.url.path, forType: .string)
+    }
+    
+    func revealInFinder() {
+        guard let firstSelected = selectedItems.first else { return }
+        NSWorkspace.shared.selectFile(firstSelected.url.path, inFileViewerRootedAtPath: "")
+    }
+    
     func deleteSelectedItems() {
         moveSelectedItemsToTrash()
     }
@@ -311,6 +645,9 @@ class FileExplorerManager: ObservableObject {
             return
         }
         
+        // Cancel previous search
+        searchTask?.cancel()
+        
         searchText = query
         if let scope = scope {
             searchScope = scope
@@ -318,8 +655,17 @@ class FileExplorerManager: ObservableObject {
         isSearching = true
         isInSearchMode = true
         
-        Task {
+        // Debounce search for better performance
+        searchTask = Task {
+            // Small delay to avoid searching on every keystroke
+            try? await Task.sleep(nanoseconds: 150_000_000) // 150ms
+            
+            guard !Task.isCancelled else { return }
+            
             let results = await searchFiles(query: query, scope: searchScope)
+            
+            guard !Task.isCancelled else { return }
+            
             await MainActor.run {
                 self.searchResults = results
                 self.isSearching = false
@@ -339,7 +685,6 @@ class FileExplorerManager: ObservableObject {
     }
     
     private func searchFiles(query: String, scope: SearchScope) async -> [FileItem] {
-        var results: [FileItem] = []
         let fileManager = FileManager.default
         
         let searchURLs: [URL]
@@ -363,23 +708,55 @@ class FileExplorerManager: ObservableObject {
             searchOptions = showHiddenFiles ? [] : [.skipsHiddenFiles]
         }
         
-        for searchURL in searchURLs {
-            await searchInDirectory(
-                url: searchURL,
-                query: query,
-                options: searchOptions,
-                results: &results
-            )
+        // Use TaskGroup for concurrent searching
+        let allResults = await withTaskGroup(of: [SearchResultItem].self) { group in
+            var combinedResults: [SearchResultItem] = []
+            
+            for searchURL in searchURLs {
+                group.addTask {
+                    var results: [SearchResultItem] = []
+                    await self.searchInDirectory(
+                        url: searchURL,
+                        query: query,
+                        options: searchOptions,
+                        results: &results,
+                        maxResults: 500 // Limit per directory
+                    )
+                    return results
+                }
+            }
+            
+            for await results in group {
+                combinedResults.append(contentsOf: results)
+            }
+            
+            return combinedResults
         }
         
-        return sortItems(results)
+        // Sort by relevance score and match type, but limit final results
+        let sortedResults = allResults.sorted { result1, result2 in
+            // First sort by match type priority
+            if result1.matchType.priority != result2.matchType.priority {
+                return result1.matchType.priority > result2.matchType.priority
+            }
+            // Then by relevance score
+            if result1.relevanceScore != result2.relevanceScore {
+                return result1.relevanceScore > result2.relevanceScore
+            }
+            // Finally by name
+            return result1.fileItem.name.localizedCaseInsensitiveCompare(result2.fileItem.name) == .orderedAscending
+        }
+        
+        // Return top 200 results to avoid UI performance issues
+        return Array(sortedResults.prefix(200)).map { $0.fileItem }
     }
     
     private func searchInDirectory(
         url: URL,
         query: String,
         options: FileManager.DirectoryEnumerationOptions,
-        results: inout [FileItem]
+        results: inout [SearchResultItem],
+        maxResults: Int = 1000
     ) async {
         guard let enumerator = FileManager.default.enumerator(
             at: url,
@@ -393,10 +770,40 @@ class FileExplorerManager: ObservableObject {
             options: options
         ) else { return }
         
+        var processedCount = 0
+        let maxProcessed = 10000 // Limit how many files we process
+        
         while let fileURL = enumerator.nextObject() as? URL {
+            processedCount += 1
+            
+            // Stop if we've processed too many files or found enough results
+            if processedCount > maxProcessed || results.count >= maxResults {
+                break
+            }
+            
             let fileName = fileURL.lastPathComponent
             
-            if fileName.localizedCaseInsensitiveContains(query) {
+            // Quick filter: skip files that obviously don't match
+            let lowercaseFileName = fileName.lowercased()
+            let lowercaseQuery = query.lowercased()
+            
+            // Fast pre-filter to avoid expensive scoring
+            let hasBasicMatch = lowercaseFileName.contains(lowercaseQuery) ||
+                               (fileName as NSString).deletingPathExtension.lowercased().contains(lowercaseQuery) ||
+                               (fileName as NSString).pathExtension.lowercased() == lowercaseQuery
+            
+            if !hasBasicMatch && query.count > 2 {
+                // For longer queries, also check subsequence match
+                let hasSubsequence = checkSimpleSubsequence(fileName: lowercaseFileName, query: lowercaseQuery)
+                if !hasSubsequence {
+                    continue
+                }
+            }
+            
+            // Calculate match score only for potential matches
+            let matchScore = calculateFuzzyMatchScore(fileName: fileName, query: query)
+            
+            if matchScore > 0.1 {
                 do {
                     let resourceValues = try fileURL.resourceValues(forKeys: [
                         .isDirectoryKey,
@@ -416,12 +823,31 @@ class FileExplorerManager: ObservableObject {
                         isHidden: resourceValues.isHidden ?? false
                     )
                     
-                    results.append(item)
+                    let searchResult = SearchResultItem(
+                        fileItem: item,
+                        relevanceScore: matchScore,
+                        matchType: determineMatchType(fileName: fileName, query: query)
+                    )
+                    
+                    results.append(searchResult)
                 } catch {
                     continue
                 }
             }
         }
+    }
+    
+    private func checkSimpleSubsequence(fileName: String, query: String) -> Bool {
+        var queryIndex = 0
+        let queryChars = Array(query)
+        
+        for char in fileName {
+            if queryIndex < queryChars.count && char == queryChars[queryIndex] {
+                queryIndex += 1
+            }
+        }
+        
+        return queryIndex == queryChars.count
     }
     
     private func moveSelectedItemsToTrash() {
@@ -436,6 +862,112 @@ class FileExplorerManager: ObservableObject {
         }
         selectedItems.removeAll()
         refresh()
+    }
+    
+    // MARK: - Fuzzy Search Implementation
+    
+    private func calculateFuzzyMatchScore(fileName: String, query: String) -> Double {
+        let lowercaseFileName = fileName.lowercased()
+        let lowercaseQuery = query.lowercased()
+        
+        // Fast early exits for common cases
+        if lowercaseFileName == lowercaseQuery {
+            return 1.0
+        }
+        
+        if lowercaseFileName.hasPrefix(lowercaseQuery) {
+            return 0.9
+        }
+        
+        if lowercaseFileName.contains(lowercaseQuery) {
+            // Simple position-based scoring without expensive distance calculation
+            if let range = lowercaseFileName.range(of: lowercaseQuery) {
+                let position = lowercaseFileName.distance(from: lowercaseFileName.startIndex, to: range.lowerBound)
+                let positionScore = 1.0 - (Double(position) / Double(lowercaseFileName.count)) * 0.3
+                return 0.8 * positionScore
+            }
+        }
+        
+        // Check filename without extension
+        let nameWithoutExtension = (fileName as NSString).deletingPathExtension.lowercased()
+        if nameWithoutExtension == lowercaseQuery {
+            return 0.95
+        }
+        
+        if nameWithoutExtension.hasPrefix(lowercaseQuery) {
+            return 0.85
+        }
+        
+        if nameWithoutExtension.contains(lowercaseQuery) {
+            return 0.75
+        }
+        
+        // Extension match
+        let fileExtension = (fileName as NSString).pathExtension.lowercased()
+        if fileExtension == lowercaseQuery {
+            return 0.7
+        }
+        
+        // Only do expensive fuzzy matching for short queries and filenames
+        if query.count <= 8 && fileName.count <= 50 {
+            // Simple subsequence match (much faster than Levenshtein)
+            let subsequenceScore = calculateSubsequenceMatch(fileName: lowercaseFileName, query: lowercaseQuery)
+            if subsequenceScore > 0.4 {
+                return subsequenceScore * 0.4
+            }
+        }
+        
+        return 0.0
+    }
+    
+    private func determineMatchType(fileName: String, query: String) -> MatchType {
+        let lowercaseFileName = fileName.lowercased()
+        let lowercaseQuery = query.lowercased()
+        let nameWithoutExtension = (fileName as NSString).deletingPathExtension.lowercased()
+        
+        if lowercaseFileName == lowercaseQuery || nameWithoutExtension == lowercaseQuery {
+            return .exactMatch
+        }
+        
+        if lowercaseFileName.hasPrefix(lowercaseQuery) || nameWithoutExtension.hasPrefix(lowercaseQuery) {
+            return .prefixMatch
+        }
+        
+        if lowercaseFileName.contains(lowercaseQuery) {
+            return .containsMatch
+        }
+        
+        let fileExtension = (fileName as NSString).pathExtension.lowercased()
+        if fileExtension == lowercaseQuery {
+            return .extensionMatch
+        }
+        
+        return .fuzzyMatch
+    }
+    
+    // Removed expensive Levenshtein and acronym matching for performance
+    
+    private func calculateSubsequenceMatch(fileName: String, query: String) -> Double {
+        let fileChars = Array(fileName)
+        let queryChars = Array(query)
+        
+        var fileIndex = 0
+        var queryIndex = 0
+        var matchedChars = 0
+        
+        while fileIndex < fileChars.count && queryIndex < queryChars.count {
+            if fileChars[fileIndex] == queryChars[queryIndex] {
+                matchedChars += 1
+                queryIndex += 1
+            }
+            fileIndex += 1
+        }
+        
+        if matchedChars == queryChars.count {
+            return Double(matchedChars) / Double(fileChars.count)
+        }
+        
+        return 0.0
     }
 }
 

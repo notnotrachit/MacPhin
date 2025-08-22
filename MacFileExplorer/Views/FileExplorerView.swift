@@ -4,6 +4,7 @@ struct FileExplorerView: View {
     @ObservedObject var fileManager: FileExplorerManager
     let selectedSidebarItem: SidebarItem?
     @State private var showingSearch = false
+    @FocusState private var focusedField: FocusedField?
     
     var body: some View {
         VStack(spacing: 0) {
@@ -80,6 +81,22 @@ struct FileExplorerView: View {
         }
         .navigationTitle(fileManager.isInSearchMode ? "Search Results" : (fileManager.currentURL.lastPathComponent.isEmpty ? "Root" : fileManager.currentURL.lastPathComponent))
         .focusable()
+        .focused($focusedField, equals: .fileList)
+        .onKeyDown { event in
+            let key = keyNameFromEvent(event)
+            let modifiers = eventModifiersFromNSEvent(event)
+            return fileManager.handleKeyPress(key, modifiers: modifiers)
+        }
+        .onChange(of: focusedField) { newValue in
+            fileManager.focusedField = newValue
+        }
+        .onChange(of: fileManager.displayItems) { _ in
+            fileManager.updateKeyboardSelectedIndex()
+        }
+        .onAppear {
+            fileManager.resetKeyboardSelection()
+            focusedField = .fileList
+        }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button(action: {
@@ -120,6 +137,68 @@ struct FileExplorerView: View {
         }
     }
     
+    // MARK: - Key Event Helpers
+    private func keyNameFromEvent(_ event: NSEvent) -> String {
+        switch event.keyCode {
+        case 126: return "Up"
+        case 125: return "Down"
+        case 123: return "Left"
+        case 124: return "Right"
+        case 36: return "Return"
+        case 49: return "Space"
+        case 48: return "Tab"
+        case 53: return "Escape"
+        case 51: return "Delete"
+        default: return event.charactersIgnoringModifiers ?? ""
+        }
+    }
+    
+    private func eventModifiersFromNSEvent(_ event: NSEvent) -> EventModifiers {
+        var modifiers = EventModifiers()
+        if event.modifierFlags.contains(.command) { modifiers.insert(.command) }
+        if event.modifierFlags.contains(.shift) { modifiers.insert(.shift) }
+        if event.modifierFlags.contains(.option) { modifiers.insert(.option) }
+        if event.modifierFlags.contains(.control) { modifiers.insert(.control) }
+        return modifiers
+    }
+}
+
+// MARK: - Key Event View Modifier
+extension View {
+    func onKeyDown(perform action: @escaping (NSEvent) -> Bool) -> some View {
+        self.background(KeyEventHandlingView(onKeyDown: action))
+    }
+}
+
+struct KeyEventHandlingView: NSViewRepresentable {
+    let onKeyDown: (NSEvent) -> Bool
+    
+    func makeNSView(context: Context) -> KeyEventNSView {
+        let view = KeyEventNSView()
+        view.onKeyDown = onKeyDown
+        return view
+    }
+    
+    func updateNSView(_ nsView: KeyEventNSView, context: Context) {
+        nsView.onKeyDown = onKeyDown
+    }
+}
+
+class KeyEventNSView: NSView {
+    var onKeyDown: ((NSEvent) -> Bool)?
+    
+    override var acceptsFirstResponder: Bool { true }
+    
+    override func keyDown(with event: NSEvent) {
+        if let onKeyDown = onKeyDown, onKeyDown(event) {
+            return // Event was handled
+        }
+        super.keyDown(with: event)
+    }
+    
+    override func becomeFirstResponder() -> Bool {
+        return true
+    }
 }
 
 struct AddressBarView: View {

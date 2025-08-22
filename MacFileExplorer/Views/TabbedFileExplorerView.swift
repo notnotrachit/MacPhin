@@ -98,6 +98,33 @@ struct TabbedFileExplorerView: View {
                 addNewTab()
             }
         }
+        .toolbar {
+            // Hidden keyboard shortcuts for tab management
+            ToolbarItemGroup(placement: .automatic) {
+                Button("New Tab") { addNewTab() }
+                    .keyboardShortcut("t", modifiers: .command)
+                    .hidden()
+                
+                Button("Close Tab") { 
+                    if let currentTab = selectedTab {
+                        closeTab(currentTab)
+                    }
+                }
+                .keyboardShortcut("w", modifiers: .command)
+                .hidden()
+                
+                // Tab switching shortcuts (1-9)
+                ForEach(1..<10) { index in
+                    Button("Tab \(index)") {
+                        if index <= tabs.count {
+                            selectedTab = tabs[index - 1]
+                        }
+                    }
+                    .keyboardShortcut(KeyEquivalent(Character("\(index)")), modifiers: .command)
+                    .hidden()
+                }
+            }
+        }
         .onChange(of: selectedSidebarItem) { newValue in
             if let item = newValue, let currentTab = selectedTab {
                 DispatchQueue.main.async {

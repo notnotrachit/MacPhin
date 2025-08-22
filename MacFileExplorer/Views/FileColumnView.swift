@@ -8,12 +8,18 @@ struct FileColumnView: View {
         HSplitView {
             // Main file list
             VStack {
-                List(fileManager.displayItems, id: \.id, selection: Binding(
-                    get: { fileManager.selectedItems },
-                    set: { fileManager.selectedItems = $0 }
-                )) { item in
-                    FileColumnRowView(item: item, fileManager: fileManager)
-                        .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
+                List(fileManager.displayItems.indices, id: \.self) { index in
+                    let item = fileManager.displayItems[index]
+                    FileColumnRowView(
+                        item: item, 
+                        fileManager: fileManager,
+                        isKeyboardSelected: fileManager.keyboardSelectedIndex == index && fileManager.focusedField == .fileList
+                    )
+                    .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
+                    .background(
+                        fileManager.keyboardSelectedIndex == index && fileManager.focusedField == .fileList ?
+                        Color.accentColor.opacity(0.1) : Color.clear
+                    )
                 }
                 .listStyle(.plain)
             }
@@ -43,6 +49,7 @@ struct FileColumnView: View {
 struct FileColumnRowView: View {
     let item: FileItem
     @ObservedObject var fileManager: FileExplorerManager
+    let isKeyboardSelected: Bool
     
     var body: some View {
         DraggableFileView(item: item) {
@@ -76,7 +83,13 @@ struct FileColumnRowView: View {
             }
             .background(
                 fileManager.selectedItems.contains(item) ? 
-                Color.accentColor.opacity(0.3) : Color.clear
+                Color.accentColor.opacity(0.3) : 
+                isKeyboardSelected ? Color.accentColor.opacity(0.1) : Color.clear
+            )
+            .overlay(
+                isKeyboardSelected ? 
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(Color.accentColor, lineWidth: 2) : nil
             )
             .cornerRadius(4)
         }

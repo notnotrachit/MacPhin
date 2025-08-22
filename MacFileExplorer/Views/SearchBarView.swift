@@ -4,7 +4,7 @@ struct SearchBarView: View {
     @Binding var searchText: String
     @Binding var isSearching: Bool
     @Binding var searchScope: SearchScope
-    @State private var isSearchFieldFocused = false
+    @FocusState private var isSearchFieldFocused: Bool
     
     let onSearch: (String, SearchScope) -> Void
     let onClear: () -> Void
@@ -20,6 +20,7 @@ struct SearchBarView: View {
                     TextField("Search files and folders...", text: $searchText)
                         .textFieldStyle(.plain)
                         .font(.system(size: 14))
+                        .focused($isSearchFieldFocused)
                         .onSubmit {
                             if !searchText.isEmpty {
                                 onSearch(searchText, searchScope)

@@ -10,8 +10,13 @@ struct FileIconView: View {
     var body: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 16) {
-                ForEach(fileManager.displayItems, id: \.id) { item in
-                    FileIconItemView(item: item, fileManager: fileManager)
+                ForEach(fileManager.displayItems.indices, id: \.self) { index in
+                    let item = fileManager.displayItems[index]
+                    FileIconItemView(
+                        item: item, 
+                        fileManager: fileManager,
+                        isKeyboardSelected: fileManager.keyboardSelectedIndex == index && fileManager.focusedField == .fileList
+                    )
                 }
             }
             .padding()
@@ -25,6 +30,7 @@ struct FileIconView: View {
 struct FileIconItemView: View {
     let item: FileItem
     @ObservedObject var fileManager: FileExplorerManager
+    let isKeyboardSelected: Bool
     
     var body: some View {
         DraggableFileView(item: item) {
@@ -50,7 +56,13 @@ struct FileIconItemView: View {
             .padding(8)
             .background(
                 fileManager.selectedItems.contains(item) ? 
-                Color.accentColor.opacity(0.3) : Color.clear
+                Color.accentColor.opacity(0.3) : 
+                isKeyboardSelected ? Color.accentColor.opacity(0.1) : Color.clear
+            )
+            .overlay(
+                isKeyboardSelected ? 
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.accentColor, lineWidth: 2) : nil
             )
             .cornerRadius(8)
             .contentShape(Rectangle())
