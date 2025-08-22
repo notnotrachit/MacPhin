@@ -1,7 +1,6 @@
 import Foundation
 import SwiftUI
 
-@MainActor
 class FileExplorerManager: ObservableObject {
     @Published var currentURL: URL
     @Published var items: [FileItem] = []
@@ -33,6 +32,7 @@ class FileExplorerManager: ObservableObject {
         self.currentURL = fileManager.homeDirectoryForCurrentUser
         loadItems()
     }
+    
     
     func navigateTo(_ url: URL) {
         // Add to history if we're not navigating through history

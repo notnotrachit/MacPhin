@@ -81,49 +81,55 @@ struct FileListRowView: View {
     @ObservedObject var fileManager: FileExplorerManager
     
     var body: some View {
-        HStack {
-            // Icon and name
-            HStack(spacing: 8) {
-                Image(systemName: item.icon)
-                    .foregroundColor(item.iconColor)
-                    .frame(width: 16, height: 16)
+        DraggableFileView(item: item) {
+            HStack {
+                // Icon/thumbnail and name
+                HStack(spacing: 8) {
+                    if item.isDirectory {
+                        Image(systemName: item.icon)
+                            .foregroundColor(item.iconColor)
+                            .frame(width: 16, height: 16)
+                    } else {
+                        FileThumbnailView(item: item, size: CGSize(width: 16, height: 16))
+                    }
+                    
+                    Text(item.name)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 
-                Text(item.name)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+                // Date modified
+                Text(item.dateModified, style: .date)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(width: 150, alignment: .leading)
+                
+                // Type
+                Text(item.isDirectory ? "Folder" : item.url.pathExtension.uppercased())
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(width: 100, alignment: .leading)
+                
+                // Size
+                Text(item.displaySize)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(width: 100, alignment: .trailing)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            
-            // Date modified
-            Text(item.dateModified, style: .date)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .frame(width: 150, alignment: .leading)
-            
-            // Type
-            Text(item.isDirectory ? "Folder" : item.url.pathExtension.uppercased())
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .frame(width: 100, alignment: .leading)
-            
-            // Size
-            Text(item.displaySize)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .frame(width: 100, alignment: .trailing)
+            .contentShape(Rectangle())
+            .onTapGesture(count: 2) {
+                fileManager.openItem(item)
+            }
+            .onTapGesture {
+                fileManager.selectItem(item)
+            }
+            .background(
+                fileManager.selectedItems.contains(item) ? 
+                Color.accentColor.opacity(0.3) : Color.clear
+            )
+            .cornerRadius(4)
         }
-        .contentShape(Rectangle())
-        .onTapGesture(count: 2) {
-            fileManager.openItem(item)
-        }
-        .onTapGesture {
-            fileManager.selectItem(item)
-        }
-        .background(
-            fileManager.selectedItems.contains(item) ? 
-            Color.accentColor.opacity(0.3) : Color.clear
-        )
-        .cornerRadius(4)
     }
 }
 

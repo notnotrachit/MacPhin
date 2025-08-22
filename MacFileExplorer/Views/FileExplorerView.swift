@@ -34,10 +34,13 @@ struct FileExplorerView: View {
                 switch fileManager.viewMode {
                 case .list:
                     FileListView(fileManager: fileManager)
+                        .onFileDrop(fileManager: fileManager)
                 case .icons:
                     FileIconView(fileManager: fileManager)
+                        .onFileDrop(fileManager: fileManager)
                 case .columns:
                     FileColumnView(fileManager: fileManager)
+                        .onFileDrop(fileManager: fileManager)
                 }
             }
         }

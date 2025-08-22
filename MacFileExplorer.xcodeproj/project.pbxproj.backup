@@ -19,10 +19,6 @@
 		A1000019000000000000001 /* FileContextMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000020000000000000001 /* FileContextMenu.swift */; };
 		A1000021000000000000001 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000022000000000000001 /* SearchView.swift */; };
 		A1000023000000000000002 /* PermissionHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000024000000000000002 /* PermissionHelper.swift */; };
-		A1000025000000000000003 /* FileThumbnailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000026000000000000003 /* FileThumbnailView.swift */; };
-		A1000027000000000000003 /* QuickPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000028000000000000003 /* QuickPreviewView.swift */; };
-		A1000029000000000000003 /* DragDropHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000030000000000000003 /* DragDropHandler.swift */; };
-		A1000031000000000000003 /* TabbedFileExplorerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000032000000000000003 /* TabbedFileExplorerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,10 +35,6 @@
 		A1000020000000000000001 /* FileContextMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileContextMenu.swift; sourceTree = "<group>"; };
 		A1000022000000000000001 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		A1000024000000000000002 /* PermissionHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionHelper.swift; sourceTree = "<group>"; };
-		A1000026000000000000003 /* FileThumbnailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileThumbnailView.swift; sourceTree = "<group>"; };
-		A1000028000000000000003 /* QuickPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPreviewView.swift; sourceTree = "<group>"; };
-		A1000030000000000000003 /* DragDropHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragDropHandler.swift; sourceTree = "<group>"; };
-		A1000032000000000000003 /* TabbedFileExplorerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabbedFileExplorerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -103,10 +95,6 @@
 				A1000018000000000000001 /* FileColumnView.swift */,
 				A1000020000000000000001 /* FileContextMenu.swift */,
 				A1000022000000000000001 /* SearchView.swift */,
-				A1000026000000000000003 /* FileThumbnailView.swift */,
-				A1000028000000000000003 /* QuickPreviewView.swift */,
-				A1000030000000000000003 /* DragDropHandler.swift */,
-				A1000032000000000000003 /* TabbedFileExplorerView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -139,7 +127,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 1640;
+				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					A1000029000000000000001 = {
 						CreatedOnToolsVersion = 15.0;
@@ -191,10 +179,6 @@
 				A1000019000000000000001 /* FileContextMenu.swift in Sources */,
 				A1000021000000000000001 /* SearchView.swift in Sources */,
 				A1000023000000000000002 /* PermissionHelper.swift in Sources */,
-				A1000025000000000000003 /* FileThumbnailView.swift in Sources */,
-				A1000027000000000000003 /* QuickPreviewView.swift in Sources */,
-				A1000029000000000000003 /* DragDropHandler.swift in Sources */,
-				A1000031000000000000003 /* TabbedFileExplorerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -235,7 +219,6 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -299,7 +282,6 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -330,7 +312,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -357,7 +338,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;

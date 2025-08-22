@@ -2,7 +2,7 @@ import SwiftUI
 
 struct SidebarView: View {
     @Binding var selectedItem: SidebarItem?
-    @ObservedObject var fileManager: FileExplorerManager
+    var fileManager: FileExplorerManager?
     
     var body: some View {
         List(selection: $selectedItem) {
@@ -27,7 +27,7 @@ struct SidebarView: View {
         }
         .listStyle(SidebarListStyle())
         .onChange(of: selectedItem) { newValue in
-            if let item = newValue {
+            if let item = newValue, let fileManager = fileManager {
                 fileManager.navigateTo(item.url)
             }
         }

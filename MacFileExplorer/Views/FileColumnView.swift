@@ -21,7 +21,7 @@ struct FileColumnView: View {
             
             // Preview/Details panel
             if let selectedItem = fileManager.selectedItems.first {
-                FileDetailsView(item: selectedItem)
+                QuickPreviewView(item: selectedItem)
                     .frame(minWidth: 250, maxWidth: 400)
             } else {
                 VStack {
@@ -45,35 +45,41 @@ struct FileColumnRowView: View {
     @ObservedObject var fileManager: FileExplorerManager
     
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: item.icon)
-                .foregroundColor(item.iconColor)
-                .frame(width: 16, height: 16)
-            
-            Text(item.name)
-                .lineLimit(1)
-                .truncationMode(.middle)
-            
-            Spacer()
-            
-            if item.isDirectory {
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+        DraggableFileView(item: item) {
+            HStack(spacing: 8) {
+                if item.isDirectory {
+                    Image(systemName: item.icon)
+                        .foregroundColor(item.iconColor)
+                        .frame(width: 16, height: 16)
+                } else {
+                    FileThumbnailView(item: item, size: CGSize(width: 16, height: 16))
+                }
+                
+                Text(item.name)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                
+                Spacer()
+                
+                if item.isDirectory {
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
+            .contentShape(Rectangle())
+            .onTapGesture(count: 2) {
+                fileManager.openItem(item)
+            }
+            .onTapGesture {
+                fileManager.selectItem(item)
+            }
+            .background(
+                fileManager.selectedItems.contains(item) ? 
+                Color.accentColor.opacity(0.3) : Color.clear
+            )
+            .cornerRadius(4)
         }
-        .contentShape(Rectangle())
-        .onTapGesture(count: 2) {
-            fileManager.openItem(item)
-        }
-        .onTapGesture {
-            fileManager.selectItem(item)
-        }
-        .background(
-            fileManager.selectedItems.contains(item) ? 
-            Color.accentColor.opacity(0.3) : Color.clear
-        )
-        .cornerRadius(4)
     }
 }
 

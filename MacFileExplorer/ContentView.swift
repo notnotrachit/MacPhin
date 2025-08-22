@@ -1,6 +1,37 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State private var useTabs = true
+    
+    var body: some View {
+        Group {
+            if useTabs {
+                TabbedContentView()
+            } else {
+                SingleWindowContentView()
+            }
+        }
+        .navigationTitle("File Explorer")
+    }
+}
+
+struct TabbedContentView: View {
+    @State private var selectedSidebarItem: SidebarItem? = .home
+    @State private var columnVisibility = NavigationSplitViewVisibility.all
+    
+    var body: some View {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            // Sidebar
+            SidebarView(selectedItem: $selectedSidebarItem, fileManager: nil)
+                .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 300)
+        } detail: {
+            // Tabbed content area
+            TabbedFileExplorerView(selectedSidebarItem: $selectedSidebarItem)
+        }
+    }
+}
+
+struct SingleWindowContentView: View {
     @StateObject private var fileManager = FileExplorerManager()
     @State private var selectedSidebarItem: SidebarItem? = .home
     @State private var columnVisibility = NavigationSplitViewVisibility.all
@@ -14,7 +45,6 @@ struct ContentView: View {
             // Main content area
             FileExplorerView(fileManager: fileManager, selectedSidebarItem: selectedSidebarItem)
         }
-        .navigationTitle("File Explorer")
         .toolbar {
             ToolbarItemGroup(placement: .navigation) {
                 Button(action: { fileManager.goBack() }) {
