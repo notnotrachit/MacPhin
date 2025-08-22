@@ -1,0 +1,36 @@
+import SwiftUI
+
+struct SidebarView: View {
+    @Binding var selectedItem: SidebarItem?
+    @ObservedObject var fileManager: FileExplorerManager
+    
+    var body: some View {
+        List(selection: $selectedItem) {
+            Section("Favorites") {
+                ForEach(SidebarItem.allCases) { item in
+                    NavigationLink(value: item) {
+                        Label(item.rawValue, systemImage: item.icon)
+                    }
+                }
+            }
+            
+            Section("Devices") {
+                Label("Macintosh HD", systemImage: "internaldrive")
+                Label("External Drive", systemImage: "externaldrive")
+                    .foregroundColor(.secondary)
+            }
+            
+            Section("Network") {
+                Label("Network", systemImage: "network")
+                    .foregroundColor(.secondary)
+            }
+        }
+        .listStyle(SidebarListStyle())
+        .onChange(of: selectedItem) { newValue in
+            if let item = newValue {
+                fileManager.navigateTo(item.url)
+            }
+        }
+    }
+}
+

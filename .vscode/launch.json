@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:FileExplorer}",
+            "name": "Debug MacFileExplorer",
+            "program": "${workspaceFolder:FileExplorer}/.build/debug/MacFileExplorer",
+            "preLaunchTask": "swift: Build Debug MacFileExplorer"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:FileExplorer}",
+            "name": "Release MacFileExplorer",
+            "program": "${workspaceFolder:FileExplorer}/.build/release/MacFileExplorer",
+            "preLaunchTask": "swift: Build Release MacFileExplorer"
+        }
+    ]
+}

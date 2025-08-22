@@ -1,0 +1,52 @@
+# macOS Swift/Xcode project .gitignore
+# Build and Derived Data
+DerivedData/
+Build/
+*.xcuserstate
+*.xcworkspace
+*.xcuserdata/
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/xcuserdata/
+
+# User-specific files
+*.swp
+*.swo
+*.DS_Store
+
+# Xcode
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xcscmblueprint
+
+# Swift Package Manager
+.build/
+Packages/
+Package.resolved
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/Build/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+# Archives
+*.xcarchive
+
+# App-specific
+MacFileExplorer/Models/*.generated.swift
+
+# Other
+*.log
+*.tmp
+*.bak
+
+# Ignore secrets
+.env
