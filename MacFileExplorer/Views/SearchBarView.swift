@@ -3,59 +3,84 @@ import SwiftUI
 struct SearchBarView: View {
     @Binding var searchText: String
     @Binding var isSearching: Bool
+    @Binding var searchScope: SearchScope
     @State private var isSearchFieldFocused = false
     
-    let onSearch: (String) -> Void
+    let onSearch: (String, SearchScope) -> Void
     let onClear: () -> Void
     
     var body: some View {
-        HStack {
+        VStack(spacing: 8) {
             HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-                    .font(.system(size: 14))
-                
-                TextField("Search files and folders...", text: $searchText)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 14))
-                    .onSubmit {
-                        if !searchText.isEmpty {
-                            onSearch(searchText)
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 14))
+                    
+                    TextField("Search files and folders...", text: $searchText)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 14))
+                        .onSubmit {
+                            if !searchText.isEmpty {
+                                onSearch(searchText, searchScope)
+                            }
                         }
-                    }
-                    .onChange(of: searchText) { newValue in
-                        if newValue.isEmpty {
+                        .onChange(of: searchText) { newValue in
+                            if newValue.isEmpty {
+                                onClear()
+                            }
+                        }
+                    
+                    if !searchText.isEmpty {
+                        Button(action: {
+                            searchText = ""
                             onClear()
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                                .font(.system(size: 12))
                         }
+                        .buttonStyle(.plain)
                     }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(Color(NSColor.controlBackgroundColor))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(isSearchFieldFocused ? Color.accentColor : Color.clear, lineWidth: 2)
+                )
                 
-                if !searchText.isEmpty {
-                    Button(action: {
+                if isSearching {
+                    Button("Cancel") {
                         searchText = ""
                         onClear()
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
-                            .font(.system(size: 12))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.borderless)
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSearchFieldFocused ? Color.accentColor : Color.clear, lineWidth: 2)
-            )
             
-            if isSearching {
-                Button("Cancel") {
-                    searchText = ""
-                    onClear()
+            // Search scope picker
+            HStack {
+                Text("Search in:")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Picker("Search Scope", selection: $searchScope) {
+                    Text("This Folder").tag(SearchScope.currentFolder)
+                    Text("This Folder + Subfolders").tag(SearchScope.currentFolderRecursive)
+                    Text("Entire System").tag(SearchScope.system)
                 }
-                .buttonStyle(.borderless)
+                .pickerStyle(.segmented)
+                .disabled(isSearching)
+                .onChange(of: searchScope) { _ in
+                    if !searchText.isEmpty {
+                        onSearch(searchText, searchScope)
+                    }
+                }
+                
+                Spacer()
             }
         }
         .animation(.easeInOut(duration: 0.2), value: isSearching)
@@ -76,18 +101,12 @@ struct GlobalSearchView: View {
                 SearchBarView(
                     searchText: $searchText,
                     isSearching: $isSearching,
-                    onSearch: performSearch,
+                    searchScope: $searchScope,
+                    onSearch: { query, scope in
+                        performSearch(query)
+                    },
                     onClear: clearSearch
                 )
-                
-                // Search scope picker
-                Picker("Search Scope", selection: $searchScope) {
-                    Text("Current Folder").tag(SearchScope.currentFolder)
-                    Text("Current Folder & Subfolders").tag(SearchScope.currentFolderRecursive)
-                    Text("Entire System").tag(SearchScope.system)
-                }
-                .pickerStyle(.segmented)
-                .disabled(isSearching)
             }
             .padding()
             .background(Color(NSColor.windowBackgroundColor))

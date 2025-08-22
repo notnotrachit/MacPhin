@@ -61,7 +61,7 @@ struct FileListView: View {
             .border(Color(NSColor.separatorColor), width: 0.5)
             
             // File list
-            List(fileManager.items, id: \.id, selection: Binding(
+            List(fileManager.displayItems, id: \.id, selection: Binding(
                 get: { fileManager.selectedItems },
                 set: { fileManager.selectedItems = $0 }
             )) { item in

@@ -10,7 +10,7 @@ struct FileIconView: View {
     var body: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 16) {
-                ForEach(fileManager.items, id: \.id) { item in
+                ForEach(fileManager.displayItems, id: \.id) { item in
                     FileIconItemView(item: item, fileManager: fileManager)
                 }
             }

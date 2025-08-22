@@ -7,15 +7,25 @@ struct FileExplorerView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Address bar and search
+            // Address bar with integrated search
             VStack(spacing: 0) {
                 AddressBarView(fileManager: fileManager)
                 
                 if showingSearch {
-                    Divider()
-                    GlobalSearchView(fileManager: fileManager)
-                        .frame(height: 300)
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                    SearchBarView(
+                        searchText: $fileManager.searchText,
+                        isSearching: $fileManager.isSearching,
+                        searchScope: $fileManager.searchScope,
+                        onSearch: { query, scope in
+                            fileManager.performSearch(query, scope: scope)
+                        },
+                        onClear: {
+                            fileManager.clearSearch()
+                        }
+                    )
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .background(Color(NSColor.controlBackgroundColor))
                 }
             }
             
@@ -40,6 +50,20 @@ struct FileExplorerView: View {
                     .buttonStyle(.borderedProminent)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if fileManager.displayItems.isEmpty && fileManager.isInSearchMode {
+                // Search results empty state
+                VStack {
+                    Image(systemName: "doc.text.magnifyingglass")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+                    Text("No results found")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                    Text("Try different search terms")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 switch fileManager.viewMode {
                 case .list:
@@ -54,7 +78,7 @@ struct FileExplorerView: View {
                 }
             }
         }
-        .navigationTitle(fileManager.currentURL.lastPathComponent.isEmpty ? "Root" : fileManager.currentURL.lastPathComponent)
+        .navigationTitle(fileManager.isInSearchMode ? "Search Results" : (fileManager.currentURL.lastPathComponent.isEmpty ? "Root" : fileManager.currentURL.lastPathComponent))
         .focusable()
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

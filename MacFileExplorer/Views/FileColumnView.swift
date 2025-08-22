@@ -8,7 +8,7 @@ struct FileColumnView: View {
         HSplitView {
             // Main file list
             VStack {
-                List(fileManager.items, id: \.id, selection: Binding(
+                List(fileManager.displayItems, id: \.id, selection: Binding(
                     get: { fileManager.selectedItems },
                     set: { fileManager.selectedItems = $0 }
                 )) { item in

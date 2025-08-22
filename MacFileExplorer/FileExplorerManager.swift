@@ -11,6 +11,11 @@ class FileExplorerManager: ObservableObject {
     @Published var sortAscending = true
     @Published var showHiddenFiles = false
     @Published var selectedItems: Set<FileItem> = []
+    @Published var searchText = ""
+    @Published var isSearching = false
+    @Published var searchResults: [FileItem] = []
+    @Published var isInSearchMode = false
+    @Published var searchScope: SearchScope = .currentFolder
     
     private var navigationHistory: [URL] = []
     private var currentHistoryIndex = -1
@@ -296,6 +301,127 @@ class FileExplorerManager: ObservableObject {
     
     func deleteSelectedItems() {
         moveSelectedItemsToTrash()
+    }
+    
+    // MARK: - Search Operations
+    
+    func performSearch(_ query: String, scope: SearchScope? = nil) {
+        guard !query.isEmpty else {
+            clearSearch()
+            return
+        }
+        
+        searchText = query
+        if let scope = scope {
+            searchScope = scope
+        }
+        isSearching = true
+        isInSearchMode = true
+        
+        Task {
+            let results = await searchFiles(query: query, scope: searchScope)
+            await MainActor.run {
+                self.searchResults = results
+                self.isSearching = false
+            }
+        }
+    }
+    
+    func clearSearch() {
+        searchText = ""
+        isSearching = false
+        isInSearchMode = false
+        searchResults = []
+    }
+    
+    var displayItems: [FileItem] {
+        return isInSearchMode ? searchResults : items
+    }
+    
+    private func searchFiles(query: String, scope: SearchScope) async -> [FileItem] {
+        var results: [FileItem] = []
+        let fileManager = FileManager.default
+        
+        let searchURLs: [URL]
+        let searchOptions: FileManager.DirectoryEnumerationOptions
+        
+        switch scope {
+        case .currentFolder:
+            searchURLs = [currentURL]
+            searchOptions = showHiddenFiles ? [.skipsSubdirectoryDescendants] : [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
+            
+        case .currentFolderRecursive:
+            searchURLs = [currentURL]
+            searchOptions = showHiddenFiles ? [] : [.skipsHiddenFiles]
+            
+        case .system:
+            searchURLs = [
+                fileManager.homeDirectoryForCurrentUser,
+                URL(fileURLWithPath: "/Applications"),
+                URL(fileURLWithPath: "/System/Applications")
+            ]
+            searchOptions = showHiddenFiles ? [] : [.skipsHiddenFiles]
+        }
+        
+        for searchURL in searchURLs {
+            await searchInDirectory(
+                url: searchURL,
+                query: query,
+                options: searchOptions,
+                results: &results
+            )
+        }
+        
+        return sortItems(results)
+    }
+    
+    private func searchInDirectory(
+        url: URL,
+        query: String,
+        options: FileManager.DirectoryEnumerationOptions,
+        results: inout [FileItem]
+    ) async {
+        guard let enumerator = FileManager.default.enumerator(
+            at: url,
+            includingPropertiesForKeys: [
+                .isDirectoryKey,
+                .fileSizeKey,
+                .contentModificationDateKey,
+                .creationDateKey,
+                .isHiddenKey
+            ],
+            options: options
+        ) else { return }
+        
+        while let fileURL = enumerator.nextObject() as? URL {
+            let fileName = fileURL.lastPathComponent
+            
+            if fileName.localizedCaseInsensitiveContains(query) {
+                do {
+                    let resourceValues = try fileURL.resourceValues(forKeys: [
+                        .isDirectoryKey,
+                        .fileSizeKey,
+                        .contentModificationDateKey,
+                        .creationDateKey,
+                        .isHiddenKey
+                    ])
+                    
+                    let item = FileItem(
+                        name: fileName,
+                        url: fileURL,
+                        isDirectory: resourceValues.isDirectory ?? false,
+                        size: Int64(resourceValues.fileSize ?? 0),
+                        dateModified: resourceValues.contentModificationDate ?? Date(),
+                        dateCreated: resourceValues.creationDate ?? Date(),
+                        isHidden: resourceValues.isHidden ?? false
+                    )
+                    
+                    results.append(item)
+                } catch {
+                    continue
+                }
+            }
+        }
     }
     
     private func moveSelectedItemsToTrash() {
