@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var useTabs = true
+    @State private var showingPermissionRequest = false
+    @State private var hasCheckedPermissions = false
     
     var body: some View {
         Group {
@@ -12,6 +14,36 @@ struct ContentView: View {
             }
         }
         .navigationTitle("File Explorer")
+        .onAppear {
+            checkPermissionsOnStartup()
+        }
+        .sheet(isPresented: $showingPermissionRequest) {
+            PermissionRequestView(
+                isPresented: $showingPermissionRequest,
+                onGranted: {
+                    // Permission granted, continue normally
+                },
+                onDenied: {
+                    // Continue with limited access
+                }
+            )
+        }
+    }
+    
+    private func checkPermissionsOnStartup() {
+        guard !hasCheckedPermissions else { return }
+        hasCheckedPermissions = true
+        
+        // Check if we have both user data access and full disk access
+        let hasUserDataAccess = PermissionHelper.shared.checkUserDataAccess()
+        let hasFullDiskAccess = PermissionHelper.shared.checkFullDiskAccess()
+        
+        if !hasUserDataAccess && !hasFullDiskAccess {
+            // Show permission request after a brief delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                showingPermissionRequest = true
+            }
+        }
     }
 }
 
@@ -21,9 +53,18 @@ struct TabbedContentView: View {
     
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            // Sidebar
-            SidebarView(selectedItem: $selectedSidebarItem, fileManager: nil)
-                .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 300)
+            // Sidebar with permission status
+            VStack {
+                SidebarView(selectedItem: $selectedSidebarItem, fileManager: nil)
+                
+                Divider()
+                
+                // Permission status indicator
+                PermissionStatusView()
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 8)
+            }
+            .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 300)
         } detail: {
             // Tabbed content area
             TabbedFileExplorerView(selectedSidebarItem: $selectedSidebarItem)
