@@ -86,13 +86,14 @@ struct FileListRowView: View {
     let item: FileItem
     @ObservedObject var fileManager: FileExplorerManager
     let isKeyboardSelected: Bool
+    @State private var isPressed = false
     
     private var isSelected: Bool {
         fileManager.selectedItems.contains(item)
     }
     
     private var backgroundColor: Color {
-        if isSelected {
+        if isPressed || isSelected {
             return Color.accentColor.opacity(0.3)
         } else if isKeyboardSelected {
             return Color.accentColor.opacity(0.1)
@@ -142,18 +143,31 @@ struct FileListRowView: View {
             .onTapGesture(count: 2) {
                 fileManager.openItem(item)
             }
-            .onTapGesture {
-                // Immediate selection for better responsiveness
-                let modifiers = NSApp.currentEvent?.modifierFlags ?? []
-                var eventModifiers: EventModifiers = []
-                if modifiers.contains(.command) { eventModifiers.insert(.command) }
-                if modifiers.contains(.shift) { eventModifiers.insert(.shift) }
-                if modifiers.contains(.option) { eventModifiers.insert(.option) }
-                if modifiers.contains(.control) { eventModifiers.insert(.control) }
-                
-                // Direct call for immediate update
-                fileManager.selectItem(item, withModifiers: eventModifiers)
-            }
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        if !isPressed {
+                            isPressed = true
+                        }
+                    }
+                    .onEnded { _ in
+                        // Immediate selection for better responsiveness
+                        let modifiers = NSApp.currentEvent?.modifierFlags ?? []
+                        var eventModifiers: EventModifiers = []
+                        if modifiers.contains(.command) { eventModifiers.insert(.command) }
+                        if modifiers.contains(.shift) { eventModifiers.insert(.shift) }
+                        if modifiers.contains(.option) { eventModifiers.insert(.option) }
+                        if modifiers.contains(.control) { eventModifiers.insert(.control) }
+                        
+                        // Direct call for immediate update
+                        fileManager.selectItem(item, withModifiers: eventModifiers)
+                        
+                        // Reset pressed state after a brief delay
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            isPressed = false
+                        }
+                    }
+            )
             .background(backgroundColor)
             .overlay(
                 isKeyboardSelected ? 

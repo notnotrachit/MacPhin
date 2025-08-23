@@ -325,35 +325,32 @@ class FileExplorerManager: ObservableObject {
     }
     
     func selectItem(_ item: FileItem, withModifiers modifiers: EventModifiers = []) {
-        // Ensure we're on the main thread for immediate UI updates
-        assert(Thread.isMainThread, "selectItem must be called on main thread")
-        
-        if modifiers.contains(.command) {
-            // Command+click: toggle selection (add/remove from selection)
-            if selectedItems.contains(item) {
-                selectedItems.remove(item)
+        // Disable animations for immediate feedback
+        withAnimation(.none) {
+            if modifiers.contains(.command) {
+                // Command+click: toggle selection (add/remove from selection)
+                if selectedItems.contains(item) {
+                    selectedItems.remove(item)
+                } else {
+                    selectedItems.insert(item)
+                }
+            } else if modifiers.contains(.shift) && !selectedItems.isEmpty {
+                // Shift+click: select range from last selected item to this item
+                let items = displayItems
+                if let lastSelectedItem = selectedItems.first,
+                   let lastIndex = items.firstIndex(of: lastSelectedItem),
+                   let currentIndex = items.firstIndex(of: item) {
+                    let startIndex = min(lastIndex, currentIndex)
+                    let endIndex = max(lastIndex, currentIndex)
+                    selectedItems = Set(items[startIndex...endIndex])
+                } else {
+                    selectedItems = [item]
+                }
             } else {
-                selectedItems.insert(item)
-            }
-        } else if modifiers.contains(.shift) && !selectedItems.isEmpty {
-            // Shift+click: select range from last selected item to this item
-            let items = displayItems
-            if let lastSelectedItem = selectedItems.first,
-               let lastIndex = items.firstIndex(of: lastSelectedItem),
-               let currentIndex = items.firstIndex(of: item) {
-                let startIndex = min(lastIndex, currentIndex)
-                let endIndex = max(lastIndex, currentIndex)
-                selectedItems = Set(items[startIndex...endIndex])
-            } else {
+                // Normal click: clear previous selection and select only the clicked item
                 selectedItems = [item]
             }
-        } else {
-            // Normal click: clear previous selection and select only the clicked item
-            selectedItems = [item]
         }
-        
-        // Force immediate UI update by triggering objectWillChange
-        objectWillChange.send()
     }
     
     func selectAll() {
