@@ -115,10 +115,14 @@ struct SingleWindowContentView: View {
                 
                 Menu {
                     Button("List") { fileManager.viewMode = .list }
-                    Button("Icons") { fileManager.viewMode = .icons }
+                    Divider()
+                    Button("Small Icons") { fileManager.viewMode = .smallIcons }
+                    Button("Medium Icons") { fileManager.viewMode = .mediumIcons }
+                    Button("Large Icons") { fileManager.viewMode = .largeIcons }
+                    Divider()
                     Button("Columns") { fileManager.viewMode = .columns }
                 } label: {
-                    Image(systemName: "square.grid.2x2")
+                    Image(systemName: fileManager.viewMode.systemImageName)
                 }
                 .help("View Options")
                 
@@ -157,12 +161,20 @@ struct SingleWindowContentView: View {
                     .keyboardShortcut("1", modifiers: .command)
                     .hidden()
                 
-                Button("Icon View") { fileManager.viewMode = .icons }
+                Button("Small Icons") { fileManager.viewMode = .smallIcons }
                     .keyboardShortcut("2", modifiers: .command)
                     .hidden()
                 
-                Button("Column View") { fileManager.viewMode = .columns }
+                Button("Medium Icons") { fileManager.viewMode = .mediumIcons }
                     .keyboardShortcut("3", modifiers: .command)
+                    .hidden()
+                
+                Button("Large Icons") { fileManager.viewMode = .largeIcons }
+                    .keyboardShortcut("4", modifiers: .command)
+                    .hidden()
+                
+                Button("Column View") { fileManager.viewMode = .columns }
+                    .keyboardShortcut("5", modifiers: .command)
                     .hidden()
                 
                 Button("Toggle Hidden") { 

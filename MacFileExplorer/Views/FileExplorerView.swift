@@ -70,7 +70,7 @@ struct FileExplorerView: View {
                 case .list:
                     FileListView(fileManager: fileManager)
                         .onFileDrop(fileManager: fileManager)
-                case .icons:
+                case .smallIcons, .mediumIcons, .largeIcons:
                     FileIconView(fileManager: fileManager)
                         .onFileDrop(fileManager: fileManager)
                 case .columns:

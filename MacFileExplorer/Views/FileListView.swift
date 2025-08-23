@@ -87,6 +87,20 @@ struct FileListRowView: View {
     @ObservedObject var fileManager: FileExplorerManager
     let isKeyboardSelected: Bool
     
+    private var isSelected: Bool {
+        fileManager.selectedItems.contains(item)
+    }
+    
+    private var backgroundColor: Color {
+        if isSelected {
+            return Color.accentColor.opacity(0.3)
+        } else if isKeyboardSelected {
+            return Color.accentColor.opacity(0.1)
+        } else {
+            return Color.clear
+        }
+    }
+    
     var body: some View {
         DraggableFileView(item: item) {
             HStack {
@@ -129,13 +143,18 @@ struct FileListRowView: View {
                 fileManager.openItem(item)
             }
             .onTapGesture {
-                fileManager.selectItem(item)
+                // Immediate selection for better responsiveness
+                let modifiers = NSApp.currentEvent?.modifierFlags ?? []
+                var eventModifiers: EventModifiers = []
+                if modifiers.contains(.command) { eventModifiers.insert(.command) }
+                if modifiers.contains(.shift) { eventModifiers.insert(.shift) }
+                if modifiers.contains(.option) { eventModifiers.insert(.option) }
+                if modifiers.contains(.control) { eventModifiers.insert(.control) }
+                
+                // Direct call for immediate update
+                fileManager.selectItem(item, withModifiers: eventModifiers)
             }
-            .background(
-                fileManager.selectedItems.contains(item) ? 
-                Color.accentColor.opacity(0.3) : 
-                isKeyboardSelected ? Color.accentColor.opacity(0.1) : Color.clear
-            )
+            .background(backgroundColor)
             .overlay(
                 isKeyboardSelected ? 
                 RoundedRectangle(cornerRadius: 4)

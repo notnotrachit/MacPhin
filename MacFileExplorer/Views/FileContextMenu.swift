@@ -65,7 +65,15 @@ struct FileContextMenu: View {
             
             Menu("View") {
                 Button("List") { fileManager.viewMode = .list }
-                Button("Icons") { fileManager.viewMode = .icons }
+                
+                Divider()
+                
+                Button("Small Icons") { fileManager.viewMode = .smallIcons }
+                Button("Medium Icons") { fileManager.viewMode = .mediumIcons }
+                Button("Large Icons") { fileManager.viewMode = .largeIcons }
+                
+                Divider()
+                
                 Button("Columns") { fileManager.viewMode = .columns }
                 
                 Divider()

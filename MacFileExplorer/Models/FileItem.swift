@@ -141,6 +141,53 @@ enum SidebarItem: String, CaseIterable, Identifiable {
 
 enum ViewMode: String, CaseIterable {
     case list = "List"
-    case icons = "Icons"
+    case smallIcons = "Small Icons"
+    case mediumIcons = "Medium Icons"
+    case largeIcons = "Large Icons"
     case columns = "Columns"
+    
+    var iconSize: CGSize {
+        switch self {
+        case .list:
+            return CGSize(width: 16, height: 16)
+        case .smallIcons:
+            return CGSize(width: 32, height: 32)
+        case .mediumIcons:
+            return CGSize(width: 64, height: 64)
+        case .largeIcons:
+            return CGSize(width: 128, height: 128)
+        case .columns:
+            return CGSize(width: 16, height: 16)
+        }
+    }
+    
+    var gridItemSize: CGFloat {
+        switch self {
+        case .list:
+            return 0 // Not used for list view
+        case .smallIcons:
+            return 80
+        case .mediumIcons:
+            return 120
+        case .largeIcons:
+            return 180
+        case .columns:
+            return 0 // Not used for column view
+        }
+    }
+    
+    var systemImageName: String {
+        switch self {
+        case .list:
+            return "list.bullet"
+        case .smallIcons:
+            return "square.grid.4x3.fill"
+        case .mediumIcons:
+            return "square.grid.3x2"
+        case .largeIcons:
+            return "square.grid.2x2"
+        case .columns:
+            return "rectangle.split.3x1"
+        }
+    }
 }
