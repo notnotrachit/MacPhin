@@ -53,6 +53,14 @@ class FileExplorerManager: ObservableObject {
     // Keyboard navigation properties
     @Published var focusedField: FocusedField? = .fileList
     @Published var keyboardSelectedIndex: Int = 0
+
+    // Drag (marquee) selection properties
+    @Published var isDragSelecting: Bool = false
+    @Published var dragStartPoint: CGPoint = .zero
+    @Published var dragCurrentPoint: CGPoint = .zero
+    @Published var dragOriginalSelection: Set<FileItem> = []
+    @Published var dragUnionMode: Bool = false // true when command is held during drag to union with existing selection
+    @Published var debugMarquee: Bool = false
     
     // Search debouncing
     private var searchTask: Task<Void, Never>?
@@ -75,7 +83,9 @@ class FileExplorerManager: ObservableObject {
     
     init() {
         self.currentURL = fileManager.homeDirectoryForCurrentUser
-        loadItems()
+    // Enable debug for marquee while developing selection behavior
+    self.debugMarquee = true
+    loadItems()
     }
     
     // MARK: - Keyboard Navigation Methods
