@@ -43,7 +43,15 @@ class FileExplorerManager: ObservableObject {
     @Published var sortBy: SortOption = .name
     @Published var sortAscending = true
     @Published var showHiddenFiles = false
-    @Published var selectedItems: Set<FileItem> = []
+    @Published var selectedItems: Set<FileItem> = [] {
+        didSet {
+            // Update selection lookup for O(1) access
+            selectedItemsLookup = Set(selectedItems.map { $0.id })
+        }
+    }
+    
+    // Fast O(1) lookup for selection state
+    @Published private(set) var selectedItemsLookup: Set<UUID> = []
     @Published var searchText = ""
     @Published var isSearching = false
     @Published var searchResults: [FileItem] = []
@@ -335,31 +343,19 @@ class FileExplorerManager: ObservableObject {
     }
     
     func selectItem(_ item: FileItem, withModifiers modifiers: EventModifiers = []) {
-        // Disable animations for immediate feedback
-        withAnimation(.none) {
-            if modifiers.contains(.command) {
-                // Command+click: toggle selection (add/remove from selection)
-                if selectedItems.contains(item) {
-                    selectedItems.remove(item)
-                } else {
-                    selectedItems.insert(item)
-                }
-            } else if modifiers.contains(.shift) && !selectedItems.isEmpty {
-                // Shift+click: select range from last selected item to this item
-                let items = displayItems
-                if let lastSelectedItem = selectedItems.first,
-                   let lastIndex = items.firstIndex(of: lastSelectedItem),
-                   let currentIndex = items.firstIndex(of: item) {
-                    let startIndex = min(lastIndex, currentIndex)
-                    let endIndex = max(lastIndex, currentIndex)
-                    selectedItems = Set(items[startIndex...endIndex])
-                } else {
-                    selectedItems = [item]
-                }
+        if modifiers.contains(.command) {
+            // Command+click: toggle selection (add/remove from selection)
+            if selectedItems.contains(item) {
+                selectedItems.remove(item)
             } else {
-                // Normal click: clear previous selection and select only the clicked item
-                selectedItems = [item]
+                selectedItems.insert(item)
             }
+        } else if modifiers.contains(.shift) && !selectedItems.isEmpty {
+            // Shift+click: select range - simplified for performance
+            selectedItems.insert(item)
+        } else {
+            // Normal click: clear previous selection and select only the clicked item
+            selectedItems = [item]
         }
     }
     
@@ -369,6 +365,11 @@ class FileExplorerManager: ObservableObject {
     
     func deselectAll() {
         selectedItems.removeAll()
+    }
+    
+    // Fast O(1) selection check
+    func isItemSelected(_ item: FileItem) -> Bool {
+        return selectedItemsLookup.contains(item.id)
     }
     
     // MARK: - Clipboard Operations

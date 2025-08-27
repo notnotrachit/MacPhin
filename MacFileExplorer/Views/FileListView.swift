@@ -216,7 +216,7 @@ struct FileListRowView: View {
     let updateSelection: () -> Void
     
     private var isSelected: Bool {
-        fileManager.selectedItems.contains(item)
+        fileManager.isItemSelected(item)
     }
     
     private var backgroundColor: Color {
@@ -230,7 +230,7 @@ struct FileListRowView: View {
     }
     
     var body: some View {
-        SelectableDraggableFileView(item: item, fileManager: fileManager, updateSelection: updateSelection) {
+        DraggableFileView(item: item) {
             HStack {
                 // Icon/thumbnail and name
                 HStack(spacing: 8) {
@@ -270,18 +270,20 @@ struct FileListRowView: View {
             .onTapGesture(count: 2) {
                 fileManager.openItem(item)
             }
-            .onTapGesture {
-                // Only handle single taps, not drags
-                let modifiers = NSApp.currentEvent?.modifierFlags ?? []
-                var eventModifiers: EventModifiers = []
-                if modifiers.contains(.command) { eventModifiers.insert(.command) }
-                if modifiers.contains(.shift) { eventModifiers.insert(.shift) }
-                if modifiers.contains(.option) { eventModifiers.insert(.option) }
-                if modifiers.contains(.control) { eventModifiers.insert(.control) }
-                
-                // Direct call for immediate update
-                fileManager.selectItem(item, withModifiers: eventModifiers)
-            }
+            .simultaneousGesture(
+                TapGesture()
+                    .onEnded { _ in
+                        // Immediate selection without waiting for gesture recognition
+                        let modifiers = NSApp.currentEvent?.modifierFlags ?? []
+                        var eventModifiers: EventModifiers = []
+                        if modifiers.contains(.command) { eventModifiers.insert(.command) }
+                        if modifiers.contains(.shift) { eventModifiers.insert(.shift) }
+                        if modifiers.contains(.option) { eventModifiers.insert(.option) }
+                        if modifiers.contains(.control) { eventModifiers.insert(.control) }
+                        
+                        fileManager.selectItem(item, withModifiers: eventModifiers)
+                    }
+            )
             .background(backgroundColor)
             .overlay(
                 isKeyboardSelected ? 
@@ -311,45 +313,29 @@ struct SelectableDraggableFileView: View {
     var body: some View {
         content
             .simultaneousGesture(
-                DragGesture(minimumDistance: 0, coordinateSpace: .named("fileListSpace"))
+                DragGesture(minimumDistance: 5, coordinateSpace: .named("fileListSpace"))
                     .onChanged { value in
                         let modifiers = NSApp.currentEvent?.modifierFlags ?? []
                         let commandHeld = modifiers.contains(.command)
                         
-                        if dragStartTime == nil {
-                            dragStartTime = Date()
-                            dragStartLocation = value.startLocation
-                            print("[DEBUG] Drag started on item \(item.name) at \(value.startLocation)")
-                        }
-                        
-                        let dragDistance = sqrt(pow(value.location.x - dragStartLocation.x, 2) + pow(value.location.y - dragStartLocation.y, 2))
-                        let dragDuration = Date().timeIntervalSince(dragStartTime ?? Date())
-                        
-                        print("[DEBUG] Drag on \(item.name): distance=\(dragDistance), duration=\(dragDuration), cmd=\(commandHeld)")
-                        
-                        // If dragging for selection (small initial movement or command held)
-                        if dragDistance > 3 && (dragDuration > 0.1 || commandHeld || !fileManager.selectedItems.contains(item)) {
-                            if !fileManager.isDragSelecting {
-                                fileManager.isDragSelecting = true
-                                fileManager.dragStartPoint = value.startLocation
-                                fileManager.dragCurrentPoint = value.location
-                                fileManager.dragOriginalSelection = fileManager.selectedItems
-                                fileManager.dragUnionMode = commandHeld
-                                if fileManager.debugMarquee { 
-                                    print("[listItemDrag] STARTED selection on item \(item.name)") 
-                                }
-                            } else {
-                                fileManager.dragCurrentPoint = value.location
-                                fileManager.dragUnionMode = commandHeld
+                        if !fileManager.isDragSelecting {
+                            fileManager.isDragSelecting = true
+                            fileManager.dragStartPoint = value.startLocation
+                            fileManager.dragCurrentPoint = value.location
+                            fileManager.dragOriginalSelection = fileManager.selectedItems
+                            fileManager.dragUnionMode = commandHeld
+                            if fileManager.debugMarquee { 
+                                print("[listItemDrag] STARTED selection on item \(item.name)") 
                             }
-                            
-                            // Update selection during drag - trigger the same logic as onPreferenceChange
-                            updateSelection()
+                        } else {
+                            fileManager.dragCurrentPoint = value.location
+                            fileManager.dragUnionMode = commandHeld
                         }
+                        
+                        // Update selection during drag
+                        updateSelection()
                     }
                     .onEnded { value in
-                        dragStartTime = nil
-                        
                         if fileManager.isDragSelecting {
                             fileManager.isDragSelecting = false
                             fileManager.dragOriginalSelection = []
