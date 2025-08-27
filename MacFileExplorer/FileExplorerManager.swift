@@ -60,7 +60,7 @@ class FileExplorerManager: ObservableObject {
     @Published var dragCurrentPoint: CGPoint = .zero
     @Published var dragOriginalSelection: Set<FileItem> = []
     @Published var dragUnionMode: Bool = false // true when command is held during drag to union with existing selection
-    @Published var debugMarquee: Bool = false
+    @Published var debugMarquee: Bool = true
     
     // Search debouncing
     private var searchTask: Task<Void, Never>?
