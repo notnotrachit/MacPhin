@@ -14,30 +14,40 @@ struct ColumnItemFramePreferenceKey: PreferenceKey {
 struct FileColumnView: View {
     @ObservedObject var fileManager: FileExplorerManager
     @State private var columnWidth: CGFloat = 200
+    @State private var itemFrames: [UUID: CGRect] = [:]
     
     var body: some View {
         HSplitView {
             // Main file list with rectangular selection
             ZStack(alignment: .topLeading) {
-                VStack {
-                    List(fileManager.displayItems.indices, id: \.self) { index in
-                        let item = fileManager.displayItems[index]
-                        FileColumnRowView(
-                            item: item, 
-                            fileManager: fileManager,
-                            isKeyboardSelected: fileManager.keyboardSelectedIndex == index && fileManager.focusedField == .fileList
-                        )
-                        .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
-                        .background(
-                            fileManager.keyboardSelectedIndex == index && fileManager.focusedField == .fileList ?
-                            Color.accentColor.opacity(0.1) : Color.clear
-                        )
-                        // Report frame for drag selection
-                        .background(GeometryReader { geo in
-                            Color.clear.preference(key: ColumnItemFramePreferenceKey.self, value: [item.id: geo.frame(in: .named("columnViewSpace"))])
-                        })
+                VStack(spacing: 0) {
+                    // Use LazyVStack instead of List to have better control over layout and coordinates
+                    LazyVStack(spacing: 0) {
+                        ForEach(fileManager.displayItems.indices, id: \.self) { index in
+                            let item = fileManager.displayItems[index]
+                            FileColumnRowView(
+                                item: item,
+                                fileManager: fileManager,
+                                isKeyboardSelected: fileManager.keyboardSelectedIndex == index && fileManager.focusedField == .fileList,
+                                updateSelection: {
+                                    updateColumnSelection()
+                                }
+                            )
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                fileManager.keyboardSelectedIndex == index && fileManager.focusedField == .fileList ?
+                                Color.accentColor.opacity(0.1) : Color.clear
+                            )
+                            // report frame for drag selection
+                            .background(GeometryReader { geo in
+                                Color.clear.preference(key: ColumnItemFramePreferenceKey.self, value: [item.id: geo.frame(in: .named("columnViewSpace"))])
+                            })
+                        }
                     }
-                    .listStyle(.plain)
+                    // Fill remaining space but don't allow selection in empty area
+                    Spacer()
+                        .allowsHitTesting(false)
                 }
                 .frame(minWidth: 200)
                 
@@ -58,63 +68,50 @@ struct FileColumnView: View {
                 }
             }
             .coordinateSpace(name: "columnViewSpace")
+            .clipped() // Prevent overflow beyond the view bounds
             .onPreferenceChange(ColumnItemFramePreferenceKey.self) { frames in
-                // When dragging, compute which items intersect marquee
-                if fileManager.isDragSelecting {
-                    // Start with either the original selection (if union mode) or an empty set
-                    var newlySelected: Set<FileItem> = fileManager.dragUnionMode ? fileManager.dragOriginalSelection : []
-                    let marqueeRect = CGRect(
-                        x: min(fileManager.dragStartPoint.x, fileManager.dragCurrentPoint.x),
-                        y: min(fileManager.dragStartPoint.y, fileManager.dragCurrentPoint.y),
-                        width: abs(fileManager.dragCurrentPoint.x - fileManager.dragStartPoint.x),
-                        height: abs(fileManager.dragCurrentPoint.y - fileManager.dragStartPoint.y)
-                    )
-
-                    for (id, frame) in frames {
-                        if fileManager.debugMarquee {
-                            print("[columnMarquee] frame for id=\(id): \(frame)")
-                        }
-                        if frame.intersects(marqueeRect) {
-                            if let item = fileManager.displayItems.first(where: { $0.id == id }) {
-                                newlySelected.insert(item)
-                            }
-                        }
-                    }
-                    if fileManager.debugMarquee {
-                        print("[columnMarquee] rect=\(marqueeRect) selected=\(newlySelected.map({ $0.name }))")
-                    }
-                    fileManager.selectedItems = newlySelected
-                }
+                // Store frames for selection calculation
+                itemFrames = frames
+                
+                // Update selection if currently dragging
+                updateColumnSelection()
             }
-            // Background drag gesture for rectangular selection when starting on empty space
-            .gesture(
-                DragGesture(minimumDistance: 5, coordinateSpace: .named("columnViewSpace"))
-                    .onChanged { value in
-                        let modifiers = NSApp.currentEvent?.modifierFlags ?? []
-                        let commandHeld = modifiers.contains(.command)
-                        
-                        if !fileManager.isDragSelecting {
-                            fileManager.isDragSelecting = true
-                            fileManager.dragStartPoint = value.startLocation
-                            fileManager.dragCurrentPoint = value.location
-                            fileManager.dragOriginalSelection = fileManager.selectedItems
-                            fileManager.dragUnionMode = commandHeld
-                            if fileManager.debugMarquee { 
-                                print("[columnBgDrag] start=\(value.startLocation) current=\(value.location) cmd=\(commandHeld)") 
-                            }
-                        } else {
-                            fileManager.dragCurrentPoint = value.location
-                            fileManager.dragUnionMode = commandHeld
-                            if fileManager.debugMarquee { 
-                                print("[columnBgDrag] move current=\(value.location) cmd=\(commandHeld)") 
-                            }
-                        }
+            // Background drag gesture for rectangular selection - only on the LazyVStack, not the Spacer
+            .gesture(DragGesture(minimumDistance: 3, coordinateSpace: .named("columnViewSpace"))
+                .onChanged { value in
+                    let modifiers = NSApp.currentEvent?.modifierFlags ?? []
+                    let commandHeld = modifiers.contains(.command)
+                    
+                    // Only start drag selection if we're within the content area (not in empty space)
+                    let maxContentY = itemFrames.values.map { $0.maxY }.max() ?? 0
+                    let dragY = max(value.startLocation.y, value.location.y)
+                    
+                    if dragY > maxContentY + 20 { // Allow small buffer
+                        return // Don't start selection in empty space
                     }
-                    .onEnded { _ in
-                        fileManager.isDragSelecting = false
-                        fileManager.dragOriginalSelection = []
-                        fileManager.dragUnionMode = false
+                    
+                    if !fileManager.isDragSelecting {
+                        fileManager.isDragSelecting = true
+                        fileManager.dragStartPoint = value.startLocation
+                        fileManager.dragCurrentPoint = value.location
+                        fileManager.dragOriginalSelection = fileManager.selectedItems
+                        fileManager.dragUnionMode = commandHeld
+                        if fileManager.debugMarquee { print("[columnBgDrag] start=\(value.startLocation) current=\(value.location) cmd=\(commandHeld)") }
+                    } else {
+                        fileManager.dragCurrentPoint = value.location
+                        // update union mode dynamically if modifier changed during drag
+                        fileManager.dragUnionMode = commandHeld
+                        if fileManager.debugMarquee { print("[columnBgDrag] move current=\(value.location) cmd=\(commandHeld)") }
                     }
+                    
+                    // Update selection during drag
+                    updateColumnSelection()
+                }
+                .onEnded { _ in
+                    fileManager.isDragSelecting = false
+                    fileManager.dragOriginalSelection = []
+                    fileManager.dragUnionMode = false
+                }
             )
             
             // Preview/Details panel
@@ -136,12 +133,51 @@ struct FileColumnView: View {
             FileContextMenu(fileManager: fileManager)
         }
     }
+    
+    private func updateColumnSelection() {
+        guard fileManager.isDragSelecting else { return }
+        
+        // Start with either the original selection (if union mode) or an empty set
+        var newlySelected: Set<FileItem> = fileManager.dragUnionMode ? fileManager.dragOriginalSelection : []
+        let marqueeRect = CGRect(
+            x: min(fileManager.dragStartPoint.x, fileManager.dragCurrentPoint.x),
+            y: min(fileManager.dragStartPoint.y, fileManager.dragCurrentPoint.y),
+            width: abs(fileManager.dragCurrentPoint.x - fileManager.dragStartPoint.x),
+            height: abs(fileManager.dragCurrentPoint.y - fileManager.dragStartPoint.y)
+        )
+
+        if fileManager.debugMarquee {
+            print("[columnMarquee] Checking intersection - marqueeRect=\(marqueeRect) with \(itemFrames.count) frames")
+        }
+
+        for (id, frame) in itemFrames {
+            let intersects = frame.intersects(marqueeRect)
+            if fileManager.debugMarquee {
+                print("[columnMarquee] Item id=\(id): frame=\(frame), intersects=\(intersects)")
+            }
+            if intersects {
+                if let item = fileManager.displayItems.first(where: { $0.id == id }) {
+                    newlySelected.insert(item)
+                    if fileManager.debugMarquee {
+                        print("[columnMarquee] Added item: \(item.name)")
+                    }
+                } else if fileManager.debugMarquee {
+                    print("[columnMarquee] Could not find item with id=\(id)")
+                }
+            }
+        }
+        if fileManager.debugMarquee {
+            print("[columnMarquee] Final selection: \(newlySelected.map({ $0.name }))")
+        }
+        fileManager.selectedItems = newlySelected
+    }
 }
 
 struct FileColumnRowView: View {
     let item: FileItem
     @ObservedObject var fileManager: FileExplorerManager
     let isKeyboardSelected: Bool
+    let updateSelection: () -> Void
     
     private var isSelected: Bool {
         fileManager.selectedItems.contains(item)
@@ -158,7 +194,7 @@ struct FileColumnRowView: View {
     }
     
     var body: some View {
-        DraggableFileView(item: item) {
+        SelectableDraggableFileView(item: item, fileManager: fileManager, updateSelection: updateSelection) {
             HStack(spacing: 8) {
                 if item.isDirectory {
                     Image(systemName: item.icon)
