@@ -20,8 +20,7 @@ struct FileColumnView: View {
         HSplitView {
             // Main file list with rectangular selection
             ZStack(alignment: .topLeading) {
-                VStack(spacing: 0) {
-                    // Use LazyVStack instead of List to have better control over layout and coordinates
+                ScrollView {
                     LazyVStack(spacing: 0) {
                         ForEach(fileManager.displayItems.indices, id: \.self) { index in
                             let item = fileManager.displayItems[index]
@@ -45,9 +44,7 @@ struct FileColumnView: View {
                             })
                         }
                     }
-                    // Fill remaining space but don't allow selection in empty area
-                    Spacer()
-                        .allowsHitTesting(false)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
                 .frame(minWidth: 200)
                 
