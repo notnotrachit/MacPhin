@@ -43,6 +43,13 @@ struct FileColumnView: View {
                                 Color.clear.preference(key: ColumnItemFramePreferenceKey.self, value: [item.id: geo.frame(in: .named("columnViewSpace"))])
                             })
                         }
+                        
+                        // Add spacer to fill remaining space for empty area clicks
+                        Spacer(minLength: 100)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                fileManager.deselectAll()
+                            }
                     }
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                 }

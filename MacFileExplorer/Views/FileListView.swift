@@ -55,7 +55,7 @@ struct FileListView: View {
     }
     
     var body: some View {
-    VStack(spacing: 0) {
+        VStack(spacing: 0) {
             // Header
             HStack {
                 Button(action: { fileManager.setSortOption(.name) }) {
@@ -136,6 +136,13 @@ struct FileListView: View {
                                 Color.clear.preference(key: ItemFramePreferenceKey.self, value: [item.id: geo.frame(in: .named("fileListSpace"))])
                             })
                         }
+                        
+                        // Add spacer to fill remaining space for empty area clicks
+                        Spacer(minLength: 100)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                fileManager.deselectAll()
+                            }
                     }
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
@@ -168,7 +175,22 @@ struct FileListView: View {
                 // Update selection if currently dragging
                 updateListSelection()
             }
-            // Background drag gesture for rectangular selection - only on the LazyVStack, not the Spacer
+            // Handle empty space clicks for deselection
+            .simultaneousGesture(
+                TapGesture()
+                    .onEnded { _ in
+                        // Check if click was in empty space
+                        let maxContentY = itemFrames.values.map { $0.maxY }.max() ?? 0
+                        if let event = NSApp.currentEvent {
+                            let clickLocation = event.locationInWindow
+                            // Convert to view coordinates - this is approximate
+                            if clickLocation.y < maxContentY - 100 { // Rough empty space detection
+                                fileManager.deselectAll()
+                            }
+                        }
+                    }
+            )
+            // Background drag gesture for rectangular selection
             .gesture(DragGesture(minimumDistance: 3, coordinateSpace: .named("fileListSpace"))
                 .onChanged { value in
                     let modifiers = NSApp.currentEvent?.modifierFlags ?? []
@@ -179,7 +201,9 @@ struct FileListView: View {
                     let dragY = max(value.startLocation.y, value.location.y)
                     
                     if dragY > maxContentY + 20 { // Allow small buffer
-                        return // Don't start selection in empty space
+                        // Click in empty space - deselect all
+                        fileManager.deselectAll()
+                        return
                     }
                     
                     if !fileManager.isDragSelecting {

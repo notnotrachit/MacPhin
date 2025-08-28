@@ -67,15 +67,15 @@ struct FileIconView: View {
                     ForEach(fileManager.displayItems.indices, id: \.self) { index in
                         let item = fileManager.displayItems[index]
                         FileIconItemView(
-                            item: item, 
+                            item: item,
                             fileManager: fileManager,
                             isKeyboardSelected: fileManager.keyboardSelectedIndex == index && fileManager.focusedField == .fileList
                         )
-                        // Report frame for drag selection - moved inside the item view
-                        .overlay(
+                        // report frame for drag selection
+                        .background(
                             GeometryReader { geo in
                                 Color.clear.preference(
-                                    key: IconItemFramePreferenceKey.self, 
+                                    key: IconItemFramePreferenceKey.self,
                                     value: [item.id: geo.frame(in: .global)]
                                 )
                             }
@@ -115,6 +115,17 @@ struct FileIconView: View {
                         )
                     }
                 }
+                .background(
+                    // Background area for deselecting on empty space clicks
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .simultaneousGesture(
+                            TapGesture()
+                                .onEnded { _ in
+                                    fileManager.deselectAll()
+                                }
+                        )
+                )
                 .padding()
             }
             .contextMenu {
