@@ -171,6 +171,9 @@ class FileExplorerManager: ObservableObject {
     
     
     func navigateTo(_ url: URL) {
+        // Clear search mode when navigating to a new location
+        clearSearch()
+        
         // Add to history if we're not navigating through history
         if currentHistoryIndex == navigationHistory.count - 1 {
             navigationHistory.append(url)
@@ -746,7 +749,7 @@ class FileExplorerManager: ObservableObject {
             searchOptions = showHiddenFiles ? [] : [.skipsHiddenFiles]
         }
         
-        // Use TaskGroup for concurrent searching
+        // Use TaskGroup for concurrent searching with shared deduplication
         let allResults = await withTaskGroup(of: [SearchResultItem].self) { group in
             var combinedResults: [SearchResultItem] = []
             
@@ -764,10 +767,17 @@ class FileExplorerManager: ObservableObject {
                 }
             }
             
+            // Collect results and deduplicate by path as we go
+            var seenGlobalPaths: Set<String> = []
             for await results in group {
-                combinedResults.append(contentsOf: results)
+                for result in results {
+                    let path = result.fileItem.url.path
+                    if !seenGlobalPaths.contains(path) {
+                        seenGlobalPaths.insert(path)
+                        combinedResults.append(result)
+                    }
+                }
             }
-            
             return combinedResults
         }
         
@@ -810,6 +820,7 @@ class FileExplorerManager: ObservableObject {
         
         var processedCount = 0
         let maxProcessed = 10000 // Limit how many files we process
+        var seenPaths: Set<String> = [] // Track already processed file paths
         
         while let fileURL = enumerator.nextObject() as? URL {
             processedCount += 1
@@ -818,6 +829,13 @@ class FileExplorerManager: ObservableObject {
             if processedCount > maxProcessed || results.count >= maxResults {
                 break
             }
+            
+            // Skip if we've already processed this file path
+            let filePath = fileURL.path
+            if seenPaths.contains(filePath) {
+                continue
+            }
+            seenPaths.insert(filePath)
             
             let fileName = fileURL.lastPathComponent
             
