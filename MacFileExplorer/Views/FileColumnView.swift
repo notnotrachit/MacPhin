@@ -61,6 +61,7 @@ struct FileColumnView: View {
                 }
                 .frame(minWidth: 200)
                 .padding(0)
+                .focusable(false)
                 
                 // Marquee overlay for rectangular selection
                 if fileManager.isDragSelecting {
@@ -80,6 +81,7 @@ struct FileColumnView: View {
             }
             .coordinateSpace(name: "columnViewSpace")
             .clipped() // Prevent overflow beyond the view bounds
+            .focusable(false)
             .onPreferenceChange(ColumnItemFramePreferenceKey.self) { frames in
                 // Store frames for selection calculation
                 itemFrames = frames

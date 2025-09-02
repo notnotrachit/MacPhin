@@ -80,8 +80,6 @@ struct FileExplorerView: View {
             }
         }
         .navigationTitle(fileManager.isInSearchMode ? "Search Results" : (fileManager.currentURL.lastPathComponent.isEmpty ? "Root" : fileManager.currentURL.lastPathComponent))
-        .focusable()
-        .focused($focusedField, equals: .fileList)
         .onKeyDown { event in
             let key = keyNameFromEvent(event)
             let modifiers = eventModifiersFromNSEvent(event)
@@ -94,8 +92,7 @@ struct FileExplorerView: View {
             fileManager.updateKeyboardSelectedIndex()
         }
         .onAppear {
-            fileManager.resetKeyboardSelection()
-            focusedField = .fileList
+            // Don't set default keyboard selection or focus to avoid blue highlighting
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

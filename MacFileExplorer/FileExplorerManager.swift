@@ -59,7 +59,7 @@ class FileExplorerManager: ObservableObject {
     @Published var searchScope: SearchScope = .currentFolder
     
     // Keyboard navigation properties
-    @Published var focusedField: FocusedField? = .fileList
+    @Published var focusedField: FocusedField? = nil
     @Published var keyboardSelectedIndex: Int = 0
 
     // Drag (marquee) selection properties
