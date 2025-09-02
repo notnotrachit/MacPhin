@@ -17,10 +17,10 @@ struct FileColumnView: View {
     @State private var itemFrames: [UUID: CGRect] = [:]
     
     var body: some View {
-        HSplitView {
+        HStack(spacing: 0) {
             // Main file list with rectangular selection
-            ZStack(alignment: .topLeading) {
-                ScrollView {
+            ZStack(alignment: .top) {
+                ScrollView(.vertical, showsIndicators: true) {
                     LazyVStack(spacing: 0) {
                         ForEach(fileManager.displayItems.indices, id: \.self) { index in
                             let item = fileManager.displayItems[index]
@@ -45,15 +45,22 @@ struct FileColumnView: View {
                         }
                         
                         // Add spacer to fill remaining space for empty area clicks
-                        Spacer(minLength: 100)
+                        Spacer()
+                            .frame(minHeight: 100)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 fileManager.deselectAll()
                             }
                     }
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .frame(maxWidth: .infinity, alignment: .top)
+                    .padding(0)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    fileManager.deselectAll()
                 }
                 .frame(minWidth: 200)
+                .padding(0)
                 
                 // Marquee overlay for rectangular selection
                 if fileManager.isDragSelecting {
@@ -80,19 +87,11 @@ struct FileColumnView: View {
                 // Update selection if currently dragging
                 updateColumnSelection()
             }
-            // Background drag gesture for rectangular selection - only on the LazyVStack, not the Spacer
+            // Background drag gesture for rectangular selection
             .gesture(DragGesture(minimumDistance: 3, coordinateSpace: .named("columnViewSpace"))
                 .onChanged { value in
                     let modifiers = NSApp.currentEvent?.modifierFlags ?? []
                     let commandHeld = modifiers.contains(.command)
-                    
-                    // Only start drag selection if we're within the content area (not in empty space)
-                    let maxContentY = itemFrames.values.map { $0.maxY }.max() ?? 0
-                    let dragY = max(value.startLocation.y, value.location.y)
-                    
-                    if dragY > maxContentY + 20 { // Allow small buffer
-                        return // Don't start selection in empty space
-                    }
                     
                     if !fileManager.isDragSelecting {
                         fileManager.isDragSelecting = true
@@ -117,6 +116,8 @@ struct FileColumnView: View {
                     fileManager.dragUnionMode = false
                 }
             )
+            
+            Divider()
             
             // Preview/Details panel
             if let selectedItem = fileManager.selectedItems.first {
