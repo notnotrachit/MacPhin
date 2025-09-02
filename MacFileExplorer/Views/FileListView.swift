@@ -144,8 +144,19 @@ struct FileListView: View {
                             })
                         }
                         
+                        // Add spacer to fill remaining space and make it tappable
+                        Spacer()
+                            .frame(minHeight: 100)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                fileManager.deselectAll()
+                            }
                     }
                     .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    fileManager.deselectAll()
                 }
                 .contextMenu {
                     FileContextMenu(fileManager: fileManager)
