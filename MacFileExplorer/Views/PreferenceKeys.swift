@@ -7,6 +7,10 @@ struct ItemFramePreferenceKey: PreferenceKey {
     static var defaultValue: [UUID: CGRect] = [:]
 
     static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
-        value.merge(nextValue(), uniquingKeysWith: { $1 })
+        let next = nextValue()
+        // Only merge if there are actually new values to avoid unnecessary updates
+        if !next.isEmpty {
+            value.merge(next, uniquingKeysWith: { $1 })
+        }
     }
 }

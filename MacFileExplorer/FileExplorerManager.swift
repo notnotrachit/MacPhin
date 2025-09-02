@@ -270,8 +270,11 @@ class FileExplorerManager: ObservableObject {
                     }
                 }
                 
+                // Sort items on background thread to avoid blocking UI
+                let sortedItems = sortItems(fileItems)
+                
                 await MainActor.run {
-                    self.items = sortItems(fileItems)
+                    self.items = sortedItems
                     self.isLoading = false
                 }
             } catch {
@@ -323,7 +326,14 @@ class FileExplorerManager: ObservableObject {
             sortBy = option
             sortAscending = true
         }
-        items = sortItems(items)
+        
+        // Sort on background thread for large folders
+        Task {
+            let sortedItems = sortItems(items)
+            await MainActor.run {
+                self.items = sortedItems
+            }
+        }
     }
     
     func openItem(_ item: FileItem) {

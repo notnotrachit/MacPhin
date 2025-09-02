@@ -83,11 +83,15 @@ struct FileColumnView: View {
             .clipped() // Prevent overflow beyond the view bounds
             .focusable(false)
             .onPreferenceChange(ColumnItemFramePreferenceKey.self) { frames in
-                // Store frames for selection calculation
-                itemFrames = frames
-                
-                // Update selection if currently dragging
-                updateColumnSelection()
+                // Only update if frames actually changed to avoid excessive updates
+                if itemFrames != frames {
+                    itemFrames = frames
+                    
+                    // Update selection if currently dragging
+                    if fileManager.isDragSelecting {
+                        updateColumnSelection()
+                    }
+                }
             }
             // Background drag gesture for rectangular selection
             .gesture(DragGesture(minimumDistance: 3, coordinateSpace: .named("columnViewSpace"))

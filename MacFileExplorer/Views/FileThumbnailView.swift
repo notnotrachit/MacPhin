@@ -2,11 +2,44 @@ import SwiftUI
 import QuickLook
 import AVFoundation
 
+// Thumbnail cache to avoid reloading the same images
+class ThumbnailCache {
+    static let shared = ThumbnailCache()
+    private var cache: [String: NSImage] = [:]
+    private let maxCacheSize = 100 // Limit cache size
+    
+    private init() {}
+    
+    func getThumbnail(for url: URL, size: CGSize) -> NSImage? {
+        let key = "\(url.path)_\(Int(size.width))x\(Int(size.height))"
+        return cache[key]
+    }
+    
+    func setThumbnail(_ image: NSImage, for url: URL, size: CGSize) {
+        let key = "\(url.path)_\(Int(size.width))x\(Int(size.height))"
+        
+        // Simple cache eviction - remove oldest entries if cache is full
+        if cache.count >= maxCacheSize {
+            let keysToRemove = Array(cache.keys.prefix(cache.count - maxCacheSize + 1))
+            for keyToRemove in keysToRemove {
+                cache.removeValue(forKey: keyToRemove)
+            }
+        }
+        
+        cache[key] = image
+    }
+    
+    func clearCache() {
+        cache.removeAll()
+    }
+}
+
 struct FileThumbnailView: View {
     let item: FileItem
     let size: CGSize
     @State private var thumbnail: NSImage?
     @State private var isLoading = false
+    @State private var loadingTask: Task<Void, Never>?
     
     var body: some View {
         Group {
@@ -27,21 +60,36 @@ struct FileThumbnailView: View {
             }
         }
         .onAppear {
-            loadThumbnail()
+            loadThumbnailIfNeeded()
         }
         .onChange(of: item.url) { _ in
-            loadThumbnail()
+            loadThumbnailIfNeeded()
+        }
+        .onDisappear {
+            // Cancel loading task when view disappears to save resources
+            loadingTask?.cancel()
+            loadingTask = nil
         }
     }
     
-    private func loadThumbnail() {
+    private func loadThumbnailIfNeeded() {
         guard !item.isDirectory else { return }
+        
+        // Cancel any existing loading task
+        loadingTask?.cancel()
+        
+        // Check cache first
+        if let cachedThumbnail = ThumbnailCache.shared.getThumbnail(for: item.url, size: size) {
+            thumbnail = cachedThumbnail
+            return
+        }
         
         let fileExtension = item.url.pathExtension.lowercased()
         let imageExtensions = ["jpg", "jpeg", "png", "gif", "bmp", "tiff", "heic", "webp"]
         let videoExtensions = ["mp4", "mov", "avi", "mkv", "m4v", "wmv"]
         let documentExtensions = ["pdf", "doc", "docx", "txt", "rtf"]
         
+        // Only load thumbnails for supported file types
         if imageExtensions.contains(fileExtension) {
             loadImageThumbnail()
         } else if videoExtensions.contains(fileExtension) {
@@ -54,10 +102,21 @@ struct FileThumbnailView: View {
     private func loadImageThumbnail() {
         isLoading = true
         
-        Task {
+        loadingTask = Task {
+            // Check if task was cancelled
+            guard !Task.isCancelled else { return }
+            
             let image = NSImage(contentsOf: item.url)
+            let resizedImage = image?.resized(to: size)
+            
+            guard !Task.isCancelled else { return }
+            
             await MainActor.run {
-                self.thumbnail = image?.resized(to: size)
+                if let resizedImage = resizedImage {
+                    self.thumbnail = resizedImage
+                    // Cache the thumbnail
+                    ThumbnailCache.shared.setThumbnail(resizedImage, for: item.url, size: size)
+                }
                 self.isLoading = false
             }
         }

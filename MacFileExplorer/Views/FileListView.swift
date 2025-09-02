@@ -181,11 +181,15 @@ struct FileListView: View {
             .coordinateSpace(name: "fileListSpace")
             .clipped() // Prevent overflow beyond the view bounds
             .onPreferenceChange(ItemFramePreferenceKey.self) { frames in
-                // Store frames for selection calculation
-                itemFrames = frames
-                
-                // Update selection if currently dragging
-                updateListSelection()
+                // Only update if frames actually changed to avoid excessive updates
+                if itemFrames != frames {
+                    itemFrames = frames
+                    
+                    // Update selection if currently dragging
+                    if fileManager.isDragSelecting {
+                        updateListSelection()
+                    }
+                }
             }
             // Background drag gesture for rectangular selection
             .gesture(DragGesture(minimumDistance: 3, coordinateSpace: .named("fileListSpace"))
