@@ -16,7 +16,7 @@ struct FileListView: View {
     @ObservedObject var fileManager: FileExplorerManager
     @State private var itemFrames: [UUID: CGRect] = [:]
     
-    private let itemHeight: CGFloat = 28
+    private let itemHeight: CGFloat = 20
     
     var body: some View {
         VStack(spacing: 0) {
@@ -200,7 +200,8 @@ struct SmoothFileListRowView: View {
                     .foregroundColor(.secondary)
                     .frame(width: 100, alignment: .trailing)
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 2)
             .contentShape(Rectangle())
             .onTapGesture(count: 2) {
                 fileManager.openItem(item)
@@ -285,7 +286,7 @@ struct OptimizedFileListView: View {
     @State private var itemFrames: [UUID: CGRect] = [:]
     @State private var scrollOffset: CGFloat = 0
     
-    private let itemHeight: CGFloat = 24
+    private let itemHeight: CGFloat = 20
     private let bufferSize = 50
     
     private var visibleItems: [(index: Int, item: FileItem)] {
@@ -325,8 +326,8 @@ struct OptimizedFileListView: View {
                                     isKeyboardSelected: fileManager.keyboardSelectedIndex == indexedItem.index && fileManager.focusedField == .fileList
                                 )
                                 .frame(height: itemHeight)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 1)
                                 .background(
                                     fileManager.keyboardSelectedIndex == indexedItem.index && fileManager.focusedField == .fileList ?
                                     Color.accentColor.opacity(0.1) : Color.clear

@@ -16,7 +16,7 @@ struct FileIconView: View {
     @State private var itemFrames: [UUID: CGRect] = [:]
     
     private let itemSize: CGFloat = 120
-    private let spacing: CGFloat = 16
+    private let spacing: CGFloat = 8
     
     private var columns: [GridItem] {
         Array(repeating: GridItem(.flexible(), spacing: spacing), count: 1)
@@ -159,7 +159,7 @@ struct SmoothFileIconItemView: View {
                     .frame(width: 100, height: 26)
                     .truncationMode(.middle)
             }
-            .padding(4)
+            .padding(8)
             .background(backgroundColor)
             .overlay(
                 isKeyboardSelected ? 
@@ -281,7 +281,7 @@ struct LazyFileGridView: View {
     
     private var columns: [GridItem] {
         [
-            GridItem(.adaptive(minimum: itemSize, maximum: itemSize + 20), spacing: 16)
+            GridItem(.adaptive(minimum: itemSize, maximum: itemSize + 20), spacing: 8)
         ]
     }
     
@@ -296,7 +296,7 @@ struct LazyFileGridView: View {
         ZStack(alignment: .topLeading) {
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVGrid(columns: columns, spacing: 16) {
+                    LazyVGrid(columns: columns, spacing: 8) {
                         ForEach(Array(visibleItems.enumerated()), id: \.element.id) { index, item in
                             let globalIndex = visibleRange.lowerBound + index
                             LazyFileIconItemView(
@@ -597,14 +597,14 @@ struct LegacyFileIconView: View {
     
     private var columns: [GridItem] {
         [
-            GridItem(.adaptive(minimum: itemSize, maximum: itemSize + 20), spacing: 16)
+            GridItem(.adaptive(minimum: itemSize, maximum: itemSize + 20), spacing: 8)
         ]
     }
     
     var body: some View {
         ZStack(alignment: .topLeading) {
             ScrollView {
-                LazyVGrid(columns: columns, spacing: 16) {
+                LazyVGrid(columns: columns, spacing: 8) {
                     ForEach(fileManager.displayItems.indices, id: \.self) { index in
                         let item = fileManager.displayItems[index]
                         SimplifiedIconItemView(
