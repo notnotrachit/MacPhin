@@ -189,8 +189,11 @@ struct TabbedFileExplorerView: View {
         }
         .onChange(of: selectedSidebarItem) { newValue in
             if let item = newValue, let currentTab = selectedTab {
-                DispatchQueue.main.async {
-                    currentTab.fileManager.navigateTo(item.url)
+                // Only navigate if the URL is different from current
+                if item.url != currentTab.fileManager.currentURL {
+                    DispatchQueue.main.async {
+                        currentTab.fileManager.navigateTo(item.url)
+                    }
                 }
             }
         }
@@ -250,12 +253,26 @@ struct TabbedFileExplorerView: View {
             fileManager.$currentURL
         )
         .receive(on: DispatchQueue.main)
-        .sink { (back, forward, _) in
+        .sink { (back, forward, currentURL) in
             self.canGoBack = back
             self.canGoForward = forward
             self.canGoUp = fileManager.canGoUp
+            
+            // Update sidebar selection if current URL matches a sidebar item
+            if let sidebarItem = self.sidebarItemForURL(currentURL) {
+                self.selectedSidebarItem = sidebarItem
+            }
         }
         .store(in: &cancellables)
+    }
+    
+    private func sidebarItemForURL(_ url: URL) -> SidebarItem? {
+        for item in SidebarItem.allCases {
+            if item.url.path == url.path {
+                return item
+            }
+        }
+        return nil
     }
 }
 
