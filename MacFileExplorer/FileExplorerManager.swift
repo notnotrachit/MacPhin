@@ -73,27 +73,27 @@ class FileExplorerManager: ObservableObject {
     // Search debouncing
     private var searchTask: Task<Void, Never>?
     
-    private var navigationHistory: [URL] = []
-    private var currentHistoryIndex = -1
+    @Published private(set) var navigationHistory: [URL] = []
+    @Published private(set) var currentHistoryIndex = -1
+    @Published private(set) var canGoBack = false
+    @Published private(set) var canGoForward = false
     private let fileManager = Foundation.FileManager.default
-    
-    var canGoBack: Bool {
-        currentHistoryIndex > 0
-    }
-    
-    var canGoForward: Bool {
-        currentHistoryIndex < navigationHistory.count - 1
-    }
     
     var canGoUp: Bool {
         currentURL.path != "/"
     }
     
     init() {
-        self.currentURL = fileManager.homeDirectoryForCurrentUser
-    // Enable debug for marquee while developing selection behavior
-    self.debugMarquee = true
-    loadItems()
+        let homeURL = fileManager.homeDirectoryForCurrentUser
+        self.currentURL = homeURL
+        // Initialize navigation history with home directory
+        self.navigationHistory = [homeURL]
+        self.currentHistoryIndex = 0
+        self.canGoBack = false
+        self.canGoForward = false
+        // Enable debug for marquee while developing selection behavior
+        self.debugMarquee = true
+        loadItems()
     }
     
     // MARK: - Keyboard Navigation Methods
@@ -171,6 +171,11 @@ class FileExplorerManager: ObservableObject {
     
     
     func navigateTo(_ url: URL) {
+        // If navigating to the same URL, do nothing
+        if url == currentURL {
+            return
+        }
+        
         // Clear search mode when navigating to a new location
         clearSearch()
         
@@ -185,23 +190,37 @@ class FileExplorerManager: ObservableObject {
             currentHistoryIndex += 1
         }
         
+        // Update navigation state
+        canGoBack = currentHistoryIndex > 0
+        canGoForward = currentHistoryIndex < navigationHistory.count - 1
+        
         currentURL = url
         selectedItems.removeAll()
         loadItems()
     }
     
     func goBack() {
-        guard canGoBack else { return }
+        guard currentHistoryIndex > 0 else { return }
         currentHistoryIndex -= 1
         currentURL = navigationHistory[currentHistoryIndex]
+        
+        // Update navigation state
+        canGoBack = currentHistoryIndex > 0
+        canGoForward = currentHistoryIndex < navigationHistory.count - 1
+        
         selectedItems.removeAll()
         loadItems()
     }
     
     func goForward() {
-        guard canGoForward else { return }
+        guard currentHistoryIndex < navigationHistory.count - 1 else { return }
         currentHistoryIndex += 1
         currentURL = navigationHistory[currentHistoryIndex]
+        
+        // Update navigation state
+        canGoBack = currentHistoryIndex > 0
+        canGoForward = currentHistoryIndex < navigationHistory.count - 1
+        
         selectedItems.removeAll()
         loadItems()
     }
