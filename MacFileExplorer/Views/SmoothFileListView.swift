@@ -27,7 +27,8 @@ struct SmoothFileListView: View {
                             SmoothFileListRowView(
                                 item: item,
                                 fileManager: fileManager,
-                                isKeyboardSelected: fileManager.keyboardSelectedIndex == index && fileManager.focusedField == .fileList
+                                isKeyboardSelected: fileManager.keyboardSelectedIndex == index && fileManager.focusedField == .fileList,
+                                rowIndex: index
                             )
                             .frame(height: itemHeight)
                             .background(
@@ -136,6 +137,7 @@ struct SmoothFileListRowView: View {
     let item: FileItem
     @ObservedObject var fileManager: FileExplorerManager
     let isKeyboardSelected: Bool
+    let rowIndex: Int
     
     private var isSelected: Bool {
         fileManager.isItemSelected(item)
@@ -147,7 +149,8 @@ struct SmoothFileListRowView: View {
         } else if isKeyboardSelected {
             return Color.accentColor.opacity(0.1)
         } else {
-            return Color.clear
+            // Alternating row colors
+            return rowIndex % 2 == 0 ? Color.clear : Color(NSColor.controlAlternatingRowBackgroundColors[1])
         }
     }
     

@@ -44,7 +44,8 @@ struct OptimizedFileListView: View {
                                 OptimizedFileListRowView(
                                     item: indexedItem.item,
                                     fileManager: fileManager,
-                                    isKeyboardSelected: fileManager.keyboardSelectedIndex == indexedItem.index && fileManager.focusedField == .fileList
+                                    isKeyboardSelected: fileManager.keyboardSelectedIndex == indexedItem.index && fileManager.focusedField == .fileList,
+                                    rowIndex: indexedItem.index
                                 )
                                 .frame(height: itemHeight)
                                 .padding(.horizontal, 8)
@@ -239,6 +240,7 @@ struct OptimizedFileListRowView: View {
     let item: FileItem
     @ObservedObject var fileManager: FileExplorerManager
     let isKeyboardSelected: Bool
+    let rowIndex: Int
     
     private var isSelected: Bool {
         fileManager.isItemSelected(item)
@@ -250,7 +252,8 @@ struct OptimizedFileListRowView: View {
         } else if isKeyboardSelected {
             return Color.accentColor.opacity(0.1)
         } else {
-            return Color.clear
+            // Alternating row colors
+            return rowIndex % 2 == 0 ? Color.clear : Color(NSColor.controlAlternatingRowBackgroundColors[1])
         }
     }
     
