@@ -15,7 +15,9 @@ struct FileIconView: View {
     @ObservedObject var fileManager: FileExplorerManager
     @State private var itemFrames: [UUID: CGRect] = [:]
     
-    private let itemSize: CGFloat = 120
+    private var itemSize: CGFloat {
+        fileManager.viewMode.gridItemSize
+    }
     private let spacing: CGFloat = 8
     
     private var columns: [GridItem] {
@@ -147,26 +149,60 @@ struct SmoothFileIconItemView: View {
         }
     }
     
+    private var iconSize: CGSize {
+        fileManager.viewMode.iconSize
+    }
+    
+    private var fontSize: Font {
+        switch fileManager.viewMode {
+        case .smallIcons:
+            return .system(size: 20)
+        case .mediumIcons:
+            return .system(size: 40)
+        case .largeIcons:
+            return .system(size: 80)
+        default:
+            return .system(size: 40)
+        }
+    }
+    
+    private var textFont: Font {
+        switch fileManager.viewMode {
+        case .smallIcons:
+            return .caption2
+        case .mediumIcons:
+            return .caption
+        case .largeIcons:
+            return .footnote
+        default:
+            return .caption
+        }
+    }
+    
+    private var itemWidth: CGFloat {
+        fileManager.viewMode.gridItemSize - 16
+    }
+    
     var body: some View {
         DraggableFileView(item: item) {
             VStack(spacing: 4) {
-                // Thumbnail or icon - fixed size
+                // Thumbnail or icon - responsive size
                 if item.isDirectory {
                     Image(systemName: item.icon)
-                        .font(.system(size: 48))
+                        .font(fontSize)
                         .foregroundColor(item.iconColor)
-                        .frame(width: 80, height: 80)
+                        .frame(width: iconSize.width, height: iconSize.height)
                 } else {
                     FastThumbnailView(item: item)
-                        .frame(width: 80, height: 80)
+                        .frame(width: iconSize.width, height: iconSize.height)
                 }
                 
-                // File name - fixed height
+                // File name - responsive
                 Text(item.name)
-                    .font(.caption)
+                    .font(textFont)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
-                    .frame(width: 100, height: 26)
+                    .frame(width: itemWidth)
                     .truncationMode(.middle)
             }
             .padding(8)
