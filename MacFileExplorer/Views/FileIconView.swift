@@ -18,20 +18,20 @@ struct FileIconView: View {
     private var itemSize: CGFloat {
         fileManager.viewMode.gridItemSize
     }
-    private let spacing: CGFloat = 8
+    private let spacing: CGFloat = 0
     
     private var columns: [GridItem] {
         Array(repeating: GridItem(.flexible(), spacing: spacing), count: 1)
     }
     
     private var adaptiveColumns: [GridItem] {
-        [GridItem(.adaptive(minimum: itemSize, maximum: itemSize), spacing: spacing)]
+        [GridItem(.adaptive(minimum: itemSize - 20, maximum: itemSize - 10), spacing: spacing)]
     }
     
     var body: some View {
         ZStack(alignment: .topLeading) {
             ScrollView {
-                LazyVGrid(columns: adaptiveColumns, spacing: spacing) {
+                LazyVGrid(columns: adaptiveColumns, spacing: 3) {
                     ForEach(fileManager.displayItems.indices, id: \.self) { index in
                         let item = fileManager.displayItems[index]
                         SmoothFileIconItemView(
@@ -39,7 +39,6 @@ struct FileIconView: View {
                             fileManager: fileManager,
                             isKeyboardSelected: fileManager.keyboardSelectedIndex == index && fileManager.focusedField == .fileList
                         )
-                        .frame(width: itemSize, height: itemSize + 30)
                         .background(
                             GeometryReader { geo in
                                 Color.clear.preference(
@@ -50,7 +49,8 @@ struct FileIconView: View {
                         )
                     }
                 }
-                .padding()
+                .padding(.horizontal, 2)
+                .padding(.vertical, 0)
             }
             .contentShape(Rectangle())
             .onTapGesture {
@@ -177,12 +177,12 @@ struct SmoothFileIconItemView: View {
     }
     
     private var itemWidth: CGFloat {
-        fileManager.viewMode.gridItemSize - 16
+        fileManager.viewMode.gridItemSize - 20
     }
     
     var body: some View {
         DraggableFileView(item: item) {
-            VStack(spacing: 4) {
+            VStack(spacing: 0) {
                 // Thumbnail or icon - responsive size
                 if item.isDirectory {
                     Image(systemName: item.icon)
@@ -197,12 +197,14 @@ struct SmoothFileIconItemView: View {
                 // File name - responsive
                 Text(item.name)
                     .font(textFont)
-                    .lineLimit(2)
+                    .lineLimit(1)
                     .multilineTextAlignment(.center)
-                    .frame(width: itemWidth)
+                    .frame(width: itemWidth, height: 12, alignment: .top)
                     .truncationMode(.middle)
+                    .clipped()
             }
-            .padding(8)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(0)
             .background(backgroundColor)
             .overlay(
                 isKeyboardSelected ? 
@@ -231,7 +233,6 @@ struct SmoothFileIconItemView: View {
     }
 }
 
-// MARK: - Fast Thumbnail View (No Animation, Fixed Size)
 struct FastThumbnailView: View {
     let item: FileItem
     @State private var thumbnail: NSImage?
@@ -324,7 +325,7 @@ struct LazyFileGridView: View {
     
     private var columns: [GridItem] {
         [
-            GridItem(.adaptive(minimum: itemSize, maximum: itemSize + 20), spacing: 8)
+            GridItem(.adaptive(minimum: itemSize - 20, maximum: itemSize - 10), spacing: 0)
         ]
     }
     
@@ -339,7 +340,7 @@ struct LazyFileGridView: View {
         ZStack(alignment: .topLeading) {
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVGrid(columns: columns, spacing: 8) {
+                    LazyVGrid(columns: columns, spacing: 3) {
                         ForEach(Array(visibleItems.enumerated()), id: \.element.id) { index, item in
                             let globalIndex = visibleRange.lowerBound + index
                             LazyFileIconItemView(
@@ -349,7 +350,6 @@ struct LazyFileGridView: View {
                                 fixedSize: itemSize
                             )
                             .id(item.id)
-                            .frame(width: itemSize, height: itemSize + 40) // Fixed frame for consistent sizing
                             .background(
                                 GeometryReader { geo in
                                     Color.clear.preference(
@@ -363,7 +363,8 @@ struct LazyFileGridView: View {
                             }
                         }
                     }
-                    .padding()
+                    .padding(.horizontal, 2)
+                    .padding(.vertical, 0)
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -492,7 +493,7 @@ struct LazyFileIconItemView: View {
     
     var body: some View {
         DraggableFileView(item: item) {
-            VStack(spacing: 8) {
+            VStack(spacing: 4) {
                 // Thumbnail or icon
                 if item.isDirectory {
                     Image(systemName: item.icon)
@@ -511,7 +512,7 @@ struct LazyFileIconItemView: View {
                     .frame(width: frameWidth)
                     .truncationMode(.middle)
             }
-            .padding(8)
+            .padding(4)
             .background(backgroundColor)
             .overlay(
                 isKeyboardSelected ? 
@@ -647,14 +648,14 @@ struct LegacyFileIconView: View {
     
     private var columns: [GridItem] {
         [
-            GridItem(.adaptive(minimum: itemSize, maximum: itemSize + 20), spacing: 8)
+            GridItem(.adaptive(minimum: itemSize, maximum: itemSize + 20), spacing: 4)
         ]
     }
     
     var body: some View {
         ZStack(alignment: .topLeading) {
             ScrollView {
-                LazyVGrid(columns: columns, spacing: 8) {
+                LazyVGrid(columns: columns, spacing: 2) {
                     ForEach(fileManager.displayItems.indices, id: \.self) { index in
                         let item = fileManager.displayItems[index]
                         SimplifiedIconItemView(
@@ -816,7 +817,7 @@ struct FileIconItemView: View {
     
     var body: some View {
         DraggableFileView(item: item) {
-            VStack(spacing: 8) {
+            VStack(spacing: 4) {
                 // Thumbnail or icon
                 if item.isDirectory {
                     Image(systemName: item.icon)
@@ -835,7 +836,7 @@ struct FileIconItemView: View {
                     .frame(width: frameWidth)
                     .truncationMode(.middle)
             }
-            .padding(8)
+            .padding(4)
             .background(backgroundColor)
             .overlay(
                 isKeyboardSelected ? 
