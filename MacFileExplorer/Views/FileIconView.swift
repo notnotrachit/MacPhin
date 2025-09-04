@@ -30,13 +30,6 @@ struct FileIconView: View {
     
     var body: some View {
         ZStack(alignment: .topLeading) {
-            // Background for empty space clicks
-            Color.clear
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    fileManager.deselectAll()
-                }
-            
             ScrollView {
                 LazyVGrid(columns: adaptiveColumns, spacing: spacing) {
                     ForEach(fileManager.displayItems.indices, id: \.self) { index in
@@ -58,6 +51,10 @@ struct FileIconView: View {
                     }
                 }
                 .padding()
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                fileManager.deselectAll()
             }
             .onPreferenceChange(IconItemFramePreferenceKey.self) { frames in
                 itemFrames = frames
@@ -340,13 +337,6 @@ struct LazyFileGridView: View {
     
     var body: some View {
         ZStack(alignment: .topLeading) {
-            // Background for empty space clicks
-            Color.clear
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    fileManager.deselectAll()
-                }
-            
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 8) {
@@ -374,6 +364,10 @@ struct LazyFileGridView: View {
                         }
                     }
                     .padding()
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    fileManager.deselectAll()
                 }
                 .onPreferenceChange(IconItemFramePreferenceKey.self) { frames in
                     itemFrames = frames
