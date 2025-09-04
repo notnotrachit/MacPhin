@@ -28,6 +28,13 @@ struct FileIconView: View {
     
     var body: some View {
         ZStack(alignment: .topLeading) {
+            // Background for empty space clicks
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    fileManager.deselectAll()
+                }
+            
             ScrollView {
                 LazyVGrid(columns: adaptiveColumns, spacing: spacing) {
                     ForEach(fileManager.displayItems.indices, id: \.self) { index in
@@ -69,6 +76,9 @@ struct FileIconView: View {
                     handleDragEnded(value)
                 }
         )
+        .contextMenu {
+            FileContextMenu(fileManager: fileManager)
+        }
     }
     
     private func updateSelection() {
@@ -294,6 +304,13 @@ struct LazyFileGridView: View {
     
     var body: some View {
         ZStack(alignment: .topLeading) {
+            // Background for empty space clicks
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    fileManager.deselectAll()
+                }
+            
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 8) {
@@ -342,6 +359,9 @@ struct LazyFileGridView: View {
                     handleDragEnded(value)
                 }
         )
+        .contextMenu {
+            FileContextMenu(fileManager: fileManager)
+        }
     }
     
     private func updateVisibleRange(for index: Int) {
