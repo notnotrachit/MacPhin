@@ -70,27 +70,25 @@ struct DraggableFileView: View {
     }
     
     var body: some View {
-        Group {
-            if fileManager.isItemSelected(item) {
-                content
-                    .onDrag {
-                        // If multiple items are selected, create providers for all selected items
-                        if fileManager.selectedItems.count > 1 {
-                            let urls = fileManager.selectedItems.map { $0.url }
-                            let provider = NSItemProvider()
-                            provider.registerFileRepresentation(forTypeIdentifier: "public.file-url", fileOptions: [], visibility: .all) { completion in
-                                // For multiple items, we'll use the first item's URL as the primary
-                                completion(urls.first, true, nil)
-                                return nil
-                            }
-                            return provider
-                        } else {
-                            return NSItemProvider(object: item.url as NSURL)
+        if fileManager.isItemSelected(item) {
+            content
+                .onDrag {
+                    // If multiple items are selected, create providers for all selected items
+                    if fileManager.selectedItems.count > 1 {
+                        let urls = fileManager.selectedItems.map { $0.url }
+                        let provider = NSItemProvider()
+                        provider.registerFileRepresentation(forTypeIdentifier: "public.file-url", fileOptions: [], visibility: .all) { completion in
+                            // For multiple items, we'll use the first item's URL as the primary
+                            completion(urls.first, true, nil)
+                            return nil
                         }
+                        return provider
+                    } else {
+                        return NSItemProvider(object: item.url as NSURL)
                     }
-            } else {
-                content
-            }
+                }
+        } else {
+            content
         }
     }
 }

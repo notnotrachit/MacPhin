@@ -53,9 +53,6 @@ struct FileIconView: View {
                 .padding(.vertical, 0)
             }
             .contentShape(Rectangle())
-            .onTapGesture {
-                fileManager.deselectAll()
-            }
             .onPreferenceChange(IconItemFramePreferenceKey.self) { frames in
                 itemFrames = frames
                 updateSelection()
