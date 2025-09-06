@@ -124,17 +124,36 @@ struct FileListView: View {
         let commandHeld = modifiers.contains(.command)
         
         if !fileManager.isDragSelecting {
-            fileManager.isDragSelecting = true
-            fileManager.dragStartPoint = value.startLocation
-            fileManager.dragCurrentPoint = value.location
-            fileManager.dragOriginalSelection = fileManager.selectedItems
-            fileManager.dragUnionMode = commandHeld
+            // Check if drag starts on a selected item
+            let dragStartPoint = value.startLocation
+            var dragStartsOnSelectedItem = false
+            
+            for (id, frame) in itemFrames {
+                if frame.contains(dragStartPoint) {
+                    if let item = fileManager.displayItems.first(where: { $0.id == id }),
+                       fileManager.isItemSelected(item) {
+                        dragStartsOnSelectedItem = true
+                        break
+                    }
+                }
+            }
+            
+            // Only start marquee selection if not dragging a selected item
+            if !dragStartsOnSelectedItem {
+                fileManager.isDragSelecting = true
+                fileManager.dragStartPoint = value.startLocation
+                fileManager.dragCurrentPoint = value.location
+                fileManager.dragOriginalSelection = fileManager.selectedItems
+                fileManager.dragUnionMode = commandHeld
+            }
         } else {
             fileManager.dragCurrentPoint = value.location
             fileManager.dragUnionMode = commandHeld
         }
         
-        updateSelection()
+        if fileManager.isDragSelecting {
+            updateSelection()
+        }
     }
     
     private func handleDragEnded() {
@@ -166,7 +185,7 @@ struct SmoothFileListRowView: View {
     }
     
     var body: some View {
-        DraggableFileView(item: item) {
+        DraggableFileView(item: item, fileManager: fileManager) {
             HStack {
                 // Icon/thumbnail and name
                 HStack(spacing: 8) {
@@ -438,17 +457,36 @@ struct OptimizedFileListView: View {
         let commandHeld = modifiers.contains(.command)
         
         if !fileManager.isDragSelecting {
-            fileManager.isDragSelecting = true
-            fileManager.dragStartPoint = value.startLocation
-            fileManager.dragCurrentPoint = value.location
-            fileManager.dragOriginalSelection = fileManager.selectedItems
-            fileManager.dragUnionMode = commandHeld
+            // Check if drag starts on a selected item
+            let dragStartPoint = value.startLocation
+            var dragStartsOnSelectedItem = false
+            
+            for (id, frame) in itemFrames {
+                if frame.contains(dragStartPoint) {
+                    if let item = fileManager.displayItems.first(where: { $0.id == id }),
+                       fileManager.isItemSelected(item) {
+                        dragStartsOnSelectedItem = true
+                        break
+                    }
+                }
+            }
+            
+            // Only start marquee selection if not dragging a selected item
+            if !dragStartsOnSelectedItem {
+                fileManager.isDragSelecting = true
+                fileManager.dragStartPoint = value.startLocation
+                fileManager.dragCurrentPoint = value.location
+                fileManager.dragOriginalSelection = fileManager.selectedItems
+                fileManager.dragUnionMode = commandHeld
+            }
         } else {
             fileManager.dragCurrentPoint = value.location
             fileManager.dragUnionMode = commandHeld
         }
         
-        updateSelection()
+        if fileManager.isDragSelecting {
+            updateSelection()
+        }
     }
     
     private func handleDragEnded() {
@@ -540,7 +578,7 @@ struct OptimizedFileListRowView: View {
     }
     
     var body: some View {
-        DraggableFileView(item: item) {
+        DraggableFileView(item: item, fileManager: fileManager) {
             HStack {
                 // Icon/thumbnail and name
                 HStack(spacing: 8) {
@@ -838,7 +876,7 @@ struct FileListRowView: View {
     }
     
     var body: some View {
-        DraggableFileView(item: item) {
+        DraggableFileView(item: item, fileManager: fileManager) {
             HStack {
                 // Icon/thumbnail and name
                 HStack(spacing: 8) {
@@ -920,48 +958,6 @@ struct SelectableDraggableFileView: View {
     
     var body: some View {
         content
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 5, coordinateSpace: .named("fileListSpace"))
-                    .onChanged { value in
-                        let modifiers = NSApp.currentEvent?.modifierFlags ?? []
-                        let commandHeld = modifiers.contains(.command)
-                        
-                        if !fileManager.isDragSelecting {
-                            fileManager.isDragSelecting = true
-                            fileManager.dragStartPoint = value.startLocation
-                            fileManager.dragCurrentPoint = value.location
-                            fileManager.dragOriginalSelection = fileManager.selectedItems
-                            fileManager.dragUnionMode = commandHeld
-                            if fileManager.debugMarquee { 
-                                print("[listItemDrag] STARTED selection on item \(item.name)") 
-                            }
-                        } else {
-                            fileManager.dragCurrentPoint = value.location
-                            fileManager.dragUnionMode = commandHeld
-                        }
-                        
-                        // Update selection during drag
-                        updateSelection()
-                    }
-                    .onEnded { value in
-                        if fileManager.isDragSelecting {
-                            fileManager.isDragSelecting = false
-                            fileManager.dragOriginalSelection = []
-                            fileManager.dragUnionMode = false
-                            if fileManager.debugMarquee {
-                                print("[listItemDrag] ENDED selection on item \(item.name)")
-                            }
-                        }
-                    }
-            )
-            .onDrag {
-                // Only provide drag data if this is a file drag (not selection drag)
-                if !fileManager.isDragSelecting {
-                    return NSItemProvider(object: item.url as NSURL)
-                } else {
-                    return NSItemProvider()
-                }
-            }
     }
 }
 

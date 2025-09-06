@@ -107,17 +107,36 @@ struct FileIconView: View {
         let commandHeld = modifiers.contains(.command)
         
         if !fileManager.isDragSelecting {
-            fileManager.isDragSelecting = true
-            fileManager.dragStartPoint = value.startLocation
-            fileManager.dragCurrentPoint = value.location
-            fileManager.dragOriginalSelection = fileManager.selectedItems
-            fileManager.dragUnionMode = commandHeld
+            // Check if drag starts on a selected item
+            let dragStartPoint = value.startLocation
+            var dragStartsOnSelectedItem = false
+            
+            for (id, frame) in itemFrames {
+                if frame.contains(dragStartPoint) {
+                    if let item = fileManager.displayItems.first(where: { $0.id == id }),
+                       fileManager.isItemSelected(item) {
+                        dragStartsOnSelectedItem = true
+                        break
+                    }
+                }
+            }
+            
+            // Only start marquee selection if not dragging a selected item
+            if !dragStartsOnSelectedItem {
+                fileManager.isDragSelecting = true
+                fileManager.dragStartPoint = value.startLocation
+                fileManager.dragCurrentPoint = value.location
+                fileManager.dragOriginalSelection = fileManager.selectedItems
+                fileManager.dragUnionMode = commandHeld
+            }
         } else {
             fileManager.dragCurrentPoint = value.location
             fileManager.dragUnionMode = commandHeld
         }
         
-        updateSelection()
+        if fileManager.isDragSelecting {
+            updateSelection()
+        }
     }
     
     private func handleDragEnded(_ value: DragGesture.Value) {
@@ -181,7 +200,7 @@ struct SmoothFileIconItemView: View {
     }
     
     var body: some View {
-        DraggableFileView(item: item) {
+        DraggableFileView(item: item, fileManager: fileManager) {
             VStack(spacing: 0) {
                 // Thumbnail or icon - responsive size
                 if item.isDirectory {
@@ -432,17 +451,36 @@ struct LazyFileGridView: View {
         let commandHeld = modifiers.contains(.command)
         
         if !fileManager.isDragSelecting {
-            fileManager.isDragSelecting = true
-            fileManager.dragStartPoint = value.startLocation
-            fileManager.dragCurrentPoint = value.location
-            fileManager.dragOriginalSelection = fileManager.selectedItems
-            fileManager.dragUnionMode = commandHeld
+            // Check if drag starts on a selected item
+            let dragStartPoint = value.startLocation
+            var dragStartsOnSelectedItem = false
+            
+            for (id, frame) in itemFrames {
+                if frame.contains(dragStartPoint) {
+                    if let item = fileManager.displayItems.first(where: { $0.id == id }),
+                       fileManager.isItemSelected(item) {
+                        dragStartsOnSelectedItem = true
+                        break
+                    }
+                }
+            }
+            
+            // Only start marquee selection if not dragging a selected item
+            if !dragStartsOnSelectedItem {
+                fileManager.isDragSelecting = true
+                fileManager.dragStartPoint = value.startLocation
+                fileManager.dragCurrentPoint = value.location
+                fileManager.dragOriginalSelection = fileManager.selectedItems
+                fileManager.dragUnionMode = commandHeld
+            }
         } else {
             fileManager.dragCurrentPoint = value.location
             fileManager.dragUnionMode = commandHeld
         }
         
-        updateSelection()
+        if fileManager.isDragSelecting {
+            updateSelection()
+        }
     }
     
     private func handleDragEnded(_ value: DragGesture.Value) {
@@ -492,7 +530,7 @@ struct LazyFileIconItemView: View {
     }
     
     var body: some View {
-        DraggableFileView(item: item) {
+        DraggableFileView(item: item, fileManager: fileManager) {
             VStack(spacing: 4) {
                 // Thumbnail or icon
                 if item.isDirectory {
@@ -563,39 +601,6 @@ struct SimplifiedIconItemView: View {
                 )
             }
         )
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 5, coordinateSpace: .global)
-                .onChanged { value in
-                    handleDragChanged(value)
-                }
-                .onEnded { value in
-                    handleDragEnded(value)
-                }
-        )
-    }
-    
-    private func handleDragChanged(_ value: DragGesture.Value) {
-        let modifiers = NSApp.currentEvent?.modifierFlags ?? []
-        let commandHeld = modifiers.contains(.command)
-        
-        if !fileManager.isDragSelecting {
-            fileManager.isDragSelecting = true
-            fileManager.dragStartPoint = value.startLocation
-            fileManager.dragCurrentPoint = value.location
-            fileManager.dragOriginalSelection = fileManager.selectedItems
-            fileManager.dragUnionMode = commandHeld
-        } else {
-            fileManager.dragCurrentPoint = value.location
-            fileManager.dragUnionMode = commandHeld
-        }
-        
-        updateSelection()
-    }
-    
-    private func handleDragEnded(_ value: DragGesture.Value) {
-        fileManager.isDragSelecting = false
-        fileManager.dragOriginalSelection = []
-        fileManager.dragUnionMode = false
     }
 }
 
@@ -816,7 +821,7 @@ struct FileIconItemView: View {
     }
     
     var body: some View {
-        DraggableFileView(item: item) {
+        DraggableFileView(item: item, fileManager: fileManager) {
             VStack(spacing: 4) {
                 // Thumbnail or icon
                 if item.isDirectory {

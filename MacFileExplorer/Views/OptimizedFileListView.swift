@@ -156,17 +156,36 @@ struct OptimizedFileListView: View {
         let commandHeld = modifiers.contains(.command)
         
         if !fileManager.isDragSelecting {
-            fileManager.isDragSelecting = true
-            fileManager.dragStartPoint = value.startLocation
-            fileManager.dragCurrentPoint = value.location
-            fileManager.dragOriginalSelection = fileManager.selectedItems
-            fileManager.dragUnionMode = commandHeld
+            // Check if drag starts on a selected item
+            let dragStartPoint = value.startLocation
+            var dragStartsOnSelectedItem = false
+            
+            for (id, frame) in itemFrames {
+                if frame.contains(dragStartPoint) {
+                    if let item = fileManager.displayItems.first(where: { $0.id == id }),
+                       fileManager.isItemSelected(item) {
+                        dragStartsOnSelectedItem = true
+                        break
+                    }
+                }
+            }
+            
+            // Only start marquee selection if not dragging a selected item
+            if !dragStartsOnSelectedItem {
+                fileManager.isDragSelecting = true
+                fileManager.dragStartPoint = value.startLocation
+                fileManager.dragCurrentPoint = value.location
+                fileManager.dragOriginalSelection = fileManager.selectedItems
+                fileManager.dragUnionMode = commandHeld
+            }
         } else {
             fileManager.dragCurrentPoint = value.location
             fileManager.dragUnionMode = commandHeld
         }
         
-        updateSelection()
+        if fileManager.isDragSelecting {
+            updateSelection()
+        }
     }
     
     private func handleDragEnded() {
@@ -258,7 +277,7 @@ struct OptimizedFileListRowView: View {
     }
     
     var body: some View {
-        DraggableFileView(item: item) {
+        DraggableFileView(item: item, fileManager: fileManager) {
             HStack {
                 // Icon/thumbnail and name
                 HStack(spacing: 8) {
