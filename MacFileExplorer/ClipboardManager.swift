@@ -51,7 +51,32 @@ class ClipboardManager: ObservableObject {
                 let fileManager = FileManager.default
                 
                 for item in clipboardItems {
-                    let destinationPath = destinationURL.appendingPathComponent(item.name)
+                    var destinationPath = destinationURL.appendingPathComponent(item.name)
+                    
+                    // Handle conflicts
+                    if fileManager.fileExists(atPath: destinationPath.path) {
+                        var baseName = item.name
+                        let fileExtension = (item.name as NSString).pathExtension
+                        if !fileExtension.isEmpty {
+                            baseName = (baseName as NSString).deletingPathExtension
+                        }
+                        var counter = 1
+                        repeat {
+                            let newName: String
+                            if operation == .copy {
+                                newName = fileExtension.isEmpty ? "\(baseName) (copy \(counter))" : "\(baseName) (copy \(counter)).\(fileExtension)"
+                            } else {
+                                newName = fileExtension.isEmpty ? "\(baseName) \(counter)" : "\(baseName) \(counter).\(fileExtension)"
+                            }
+                            destinationPath = destinationURL.appendingPathComponent(newName)
+                            counter += 1
+                        } while fileManager.fileExists(atPath: destinationPath.path)
+                    }
+                    
+                    // For cut, skip if same path (no-op)
+                    if operation == .cut && item.url == destinationPath {
+                        continue
+                    }
                     
                     switch operation {
                     case .copy:

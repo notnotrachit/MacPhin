@@ -248,6 +248,7 @@ struct SmoothFileListRowView: View {
                     .stroke(Color.accentColor, lineWidth: 2) : nil
             )
             .cornerRadius(4)
+            .opacity(fileManager.isItemCut(item) ? 0.5 : 1.0)
         }
     }
 }
@@ -638,6 +639,7 @@ struct OptimizedFileListRowView: View {
                     .stroke(Color.accentColor, lineWidth: 2) : nil
             )
             .cornerRadius(4)
+            .opacity(fileManager.isItemCut(item) ? 0.5 : 1.0)
         }
     }
 }
@@ -937,6 +939,7 @@ struct FileListRowView: View {
                     .stroke(Color.accentColor, lineWidth: 2) : nil
             )
             .cornerRadius(4)
+            .opacity(fileManager.isItemCut(item) ? 0.5 : 1.0)
         }
     }
 }
@@ -960,4 +963,3 @@ struct SelectableDraggableFileView: View {
         content
     }
 }
-

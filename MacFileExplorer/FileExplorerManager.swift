@@ -409,11 +409,13 @@ class FileExplorerManager: ObservableObject {
     func copySelectedItems() {
         guard !selectedItems.isEmpty else { return }
         ClipboardManager.shared.copyItems(Array(selectedItems))
+        objectWillChange.send()
     }
     
     func cutSelectedItems() {
         guard !selectedItems.isEmpty else { return }
         ClipboardManager.shared.cutItems(Array(selectedItems))
+        objectWillChange.send()
     }
     
     func pasteItems() {
@@ -422,6 +424,7 @@ class FileExplorerManager: ObservableObject {
                 switch result {
                 case .success:
                     self.refresh()
+                    self.objectWillChange.send()
                 case .failure(let error):
                     self.errorMessage = "Paste failed: \(error.localizedDescription)"
                 }
@@ -431,6 +434,11 @@ class FileExplorerManager: ObservableObject {
     
     var canPaste: Bool {
         ClipboardManager.shared.canPaste
+    }
+    
+    // MARK: - Cut Item Check
+    func isItemCut(_ item: FileItem) -> Bool {
+        ClipboardManager.shared.operation == .cut && ClipboardManager.shared.clipboardItems.contains { $0.id == item.id }
     }
     
     // MARK: - Keyboard Event Handling
