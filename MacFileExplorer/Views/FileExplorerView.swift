@@ -17,6 +17,14 @@ struct FileExplorerView: View {
                         searchText: $fileManager.searchText,
                         isSearching: $fileManager.isSearching,
                         searchScope: $fileManager.searchScope,
+                        fileTypeFilter: $fileManager.fileTypeFilter,
+                        sizeOperator: $fileManager.sizeOperator,
+                        sizeValue: $fileManager.sizeValue,
+                        sizeUnit: $fileManager.sizeUnit,
+                        dateFrom: $fileManager.dateFrom,
+                        dateTo: $fileManager.dateTo,
+                        useRegex: $fileManager.useRegex,
+                        searchInContent: $fileManager.searchInContent,
                         onSearch: { query, scope in
                             fileManager.performSearch(query, scope: scope)
                         },
@@ -253,4 +261,3 @@ struct AddressBarView: View {
         .padding(.vertical, 8)
     }
 }
-

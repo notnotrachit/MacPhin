@@ -58,6 +58,16 @@ class FileExplorerManager: ObservableObject {
     @Published var isInSearchMode = false
     @Published var searchScope: SearchScope = .currentFolder
     
+    // Enhanced search filters
+    @Published var fileTypeFilter: String = ""
+    @Published var sizeOperator: String = ">"
+    @Published var sizeValue: Double = 0.0
+    @Published var sizeUnit: String = "MB"
+    @Published var dateFrom: Date? = nil
+    @Published var dateTo: Date? = nil
+    @Published var useRegex: Bool = false
+    @Published var searchInContent: Bool = false
+    
     // Keyboard navigation properties
     @Published var focusedField: FocusedField? = nil
     @Published var keyboardSelectedIndex: Int = 0
@@ -740,7 +750,18 @@ class FileExplorerManager: ObservableObject {
             
             guard !Task.isCancelled else { return }
             
-            let results = await searchFiles(query: query, scope: searchScope)
+            let results = await searchFiles(
+                query: query,
+                scope: searchScope,
+                fileType: fileTypeFilter,
+                sizeOp: sizeOperator,
+                sizeVal: sizeValue,
+                sizeUnit: sizeUnit,
+                dateFrom: dateFrom,
+                dateTo: dateTo,
+                regex: useRegex,
+                contentSearch: searchInContent
+            )
             
             guard !Task.isCancelled else { return }
             
@@ -762,7 +783,18 @@ class FileExplorerManager: ObservableObject {
         return isInSearchMode ? searchResults : items
     }
     
-    private func searchFiles(query: String, scope: SearchScope) async -> [FileItem] {
+    private func searchFiles(
+        query: String,
+        scope: SearchScope,
+        fileType: String = "",
+        sizeOp: String = ">",
+        sizeVal: Double = 0.0,
+        sizeUnit: String = "MB",
+        dateFrom: Date? = nil,
+        dateTo: Date? = nil,
+        regex: Bool = false,
+        contentSearch: Bool = false
+    ) async -> [FileItem] {
         let fileManager = FileManager.default
         
         let searchURLs: [URL]
@@ -798,7 +830,15 @@ class FileExplorerManager: ObservableObject {
                         query: query,
                         options: searchOptions,
                         results: &results,
-                        maxResults: 500 // Limit per directory
+                        maxResults: 500, // Limit per directory
+                        fileType: fileType,
+                        sizeOp: sizeOp,
+                        sizeVal: sizeVal,
+                        sizeUnit: sizeUnit,
+                        dateFrom: dateFrom,
+                        dateTo: dateTo,
+                        regex: regex,
+                        contentSearch: contentSearch
                     )
                     return results
                 }
@@ -818,8 +858,39 @@ class FileExplorerManager: ObservableObject {
             return combinedResults
         }
         
+        // Apply additional filters after search
+        let filteredResults = allResults.filter { result in
+            // File type filter
+            if !fileType.isEmpty {
+                let extensionMatch = result.fileItem.url.pathExtension.lowercased() == fileType.lowercased()
+                if !extensionMatch { return false }
+            }
+            
+            // Size filter (skip if sizeVal <= 0, default disabled state)
+            var sizeCondition = true
+            if sizeVal > 0 {
+                let sizeInBytes = result.fileItem.size
+                let sizeInUnit = convertToBytes(value: sizeVal, unit: sizeUnit)
+                switch sizeOp {
+                case ">": sizeCondition = sizeInBytes > sizeInUnit
+                case "<": sizeCondition = sizeInBytes < sizeInUnit
+                case "=": sizeCondition = abs(sizeInBytes - sizeInUnit) < 1024 // 1KB tolerance
+                case ">=": sizeCondition = sizeInBytes >= sizeInUnit
+                case "<=": sizeCondition = sizeInBytes <= sizeInUnit
+                default: sizeCondition = true
+                }
+            }
+            if !sizeCondition { return false }
+            
+            // Date filter
+            if let from = dateFrom, result.fileItem.dateModified < from { return false }
+            if let to = dateTo, result.fileItem.dateModified > to { return false }
+            
+            return true
+        }
+        
         // Sort by relevance score and match type, but limit final results
-        let sortedResults = allResults.sorted { result1, result2 in
+        let sortedResults = filteredResults.sorted { result1, result2 in
             // First sort by match type priority
             if result1.matchType.priority != result2.matchType.priority {
                 return result1.matchType.priority > result2.matchType.priority
@@ -836,12 +907,31 @@ class FileExplorerManager: ObservableObject {
         return Array(sortedResults.prefix(200)).map { $0.fileItem }
     }
     
+    private func convertToBytes(value: Double, unit: String) -> Int64 {
+        let bytes: Double
+        switch unit.lowercased() {
+        case "kb": bytes = value * 1024
+        case "mb": bytes = value * 1024 * 1024
+        case "gb": bytes = value * 1024 * 1024 * 1024
+        default: bytes = value // bytes
+        }
+        return Int64(bytes)
+    }
+    
     private func searchInDirectory(
         url: URL,
         query: String,
         options: FileManager.DirectoryEnumerationOptions,
         results: inout [SearchResultItem],
-        maxResults: Int = 1000
+        maxResults: Int = 1000,
+        fileType: String = "",
+        sizeOp: String = ">",
+        sizeVal: Double = 0.0,
+        sizeUnit: String = "MB",
+        dateFrom: Date? = nil,
+        dateTo: Date? = nil,
+        regex: Bool = false,
+        contentSearch: Bool = false
     ) async {
         guard let enumerator = FileManager.default.enumerator(
             at: url,
@@ -880,25 +970,80 @@ class FileExplorerManager: ObservableObject {
             let lowercaseFileName = fileName.lowercased()
             let lowercaseQuery = query.lowercased()
             
-            // Fast pre-filter to avoid expensive scoring
-            let hasBasicMatch = lowercaseFileName.contains(lowercaseQuery) ||
-                               (fileName as NSString).deletingPathExtension.lowercased().contains(lowercaseQuery) ||
-                               (fileName as NSString).pathExtension.lowercased() == lowercaseQuery
+            var matchesQuery = false
             
-            if !hasBasicMatch && query.count > 2 {
-                // For longer queries, also check subsequence match
-                let hasSubsequence = checkSimpleSubsequence(fileName: lowercaseFileName, query: lowercaseQuery)
-                if !hasSubsequence {
-                    continue
+            if regex {
+                // Regex matching
+                do {
+                    let regex = try NSRegularExpression(pattern: query, options: [])
+                    let range = NSRange(location: 0, length: lowercaseFileName.utf16.count)
+                    matchesQuery = regex.firstMatch(in: lowercaseFileName, options: [], range: range) != nil
+                } catch {
+                    // Fallback to contains if regex invalid
+                    matchesQuery = lowercaseFileName.contains(lowercaseQuery)
+                }
+            } else {
+                // Fast pre-filter to avoid expensive scoring
+                let hasBasicMatch = lowercaseFileName.contains(lowercaseQuery) ||
+                                   (fileName as NSString).deletingPathExtension.lowercased().contains(lowercaseQuery) ||
+                                   (fileName as NSString).pathExtension.lowercased() == lowercaseQuery
+                
+                if !hasBasicMatch && query.count > 2 {
+                    // For longer queries, also check subsequence match
+                    let hasSubsequence = checkSimpleSubsequence(fileName: lowercaseFileName, query: lowercaseQuery)
+                    if !hasSubsequence {
+                        continue
+                    }
+                }
+                matchesQuery = true // Proceed to score if basic match
+            }
+            
+            if !matchesQuery {
+                continue
+            }
+            
+            // Fetch resource values for content search checks
+            var resourceValues: URLResourceValues?
+            var isDirectory = false
+            var fileSize: Int64 = 0
+            do {
+                resourceValues = try fileURL.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey])
+                isDirectory = resourceValues?.isDirectory ?? false
+                fileSize = Int64(resourceValues?.fileSize ?? 0)
+            } catch {
+                continue
+            }
+            
+            // Content search for text files
+            var contentMatchScore: Double = 0.0
+            if contentSearch && !isDirectory && fileSize < 1_048_576 { // <1MB
+                let textExtensions = ["txt", "md", "rtf", "html", "css", "js", "py", "swift", "json"]
+                if textExtensions.contains(fileURL.pathExtension.lowercased()) {
+                    if let content = try? String(contentsOf: fileURL, encoding: .utf8) {
+                        if regex {
+                            do {
+                                let regex = try NSRegularExpression(pattern: query, options: [])
+                                let range = NSRange(location: 0, length: content.utf16.count)
+                                if regex.firstMatch(in: content, options: [], range: range) != nil {
+                                    contentMatchScore = 0.5
+                                }
+                            } catch {}
+                        } else {
+                            if content.lowercased().contains(lowercaseQuery) {
+                                contentMatchScore = 0.5
+                            }
+                        }
+                    }
                 }
             }
             
             // Calculate match score only for potential matches
-            let matchScore = calculateFuzzyMatchScore(fileName: fileName, query: query)
+            let nameMatchScore = calculateFuzzyMatchScore(fileName: fileName, query: query)
+            let matchScore = max(nameMatchScore, contentMatchScore)
             
             if matchScore > 0.1 {
                 do {
-                    let resourceValues = try fileURL.resourceValues(forKeys: [
+                    let fullResourceValues = try fileURL.resourceValues(forKeys: [
                         .isDirectoryKey,
                         .fileSizeKey,
                         .contentModificationDateKey,
@@ -909,17 +1054,19 @@ class FileExplorerManager: ObservableObject {
                     let item = FileItem(
                         name: fileName,
                         url: fileURL,
-                        isDirectory: resourceValues.isDirectory ?? false,
-                        size: Int64(resourceValues.fileSize ?? 0),
-                        dateModified: resourceValues.contentModificationDate ?? Date(),
-                        dateCreated: resourceValues.creationDate ?? Date(),
-                        isHidden: resourceValues.isHidden ?? false
+                        isDirectory: fullResourceValues.isDirectory ?? false,
+                        size: Int64(fullResourceValues.fileSize ?? 0),
+                        dateModified: fullResourceValues.contentModificationDate ?? Date(),
+                        dateCreated: fullResourceValues.creationDate ?? Date(),
+                        isHidden: fullResourceValues.isHidden ?? false
                     )
+                    
+                    let matchType: MatchType = contentMatchScore > nameMatchScore ? .fuzzyMatch : determineMatchType(fileName: fileName, query: query)
                     
                     let searchResult = SearchResultItem(
                         fileItem: item,
                         relevanceScore: matchScore,
-                        matchType: determineMatchType(fileName: fileName, query: query)
+                        matchType: matchType
                     )
                     
                     results.append(searchResult)

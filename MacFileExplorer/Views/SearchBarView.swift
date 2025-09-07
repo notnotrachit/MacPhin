@@ -4,13 +4,26 @@ struct SearchBarView: View {
     @Binding var searchText: String
     @Binding var isSearching: Bool
     @Binding var searchScope: SearchScope
+    @Binding var fileTypeFilter: String
+    @Binding var sizeOperator: String
+    @Binding var sizeValue: Double
+    @Binding var sizeUnit: String
+    @Binding var dateFrom: Date?
+    @Binding var dateTo: Date?
+    @Binding var useRegex: Bool
+    @Binding var searchInContent: Bool
+    @State private var showAdvancedFilters = false
     @FocusState private var isSearchFieldFocused: Bool
     
     let onSearch: (String, SearchScope) -> Void
     let onClear: () -> Void
     
+    private let sizeOperators = ["=", ">", "<", ">=", "<="]
+    private let sizeUnits = ["Bytes", "KB", "MB", "GB"]
+    
     var body: some View {
         VStack(spacing: 8) {
+            // Search input
             HStack {
                 HStack {
                     Image(systemName: "magnifyingglass")
@@ -29,6 +42,8 @@ struct SearchBarView: View {
                         .onChange(of: searchText) { newValue in
                             if newValue.isEmpty {
                                 onClear()
+                            } else {
+                                onSearch(newValue, searchScope)
                             }
                         }
                     
@@ -42,6 +57,17 @@ struct SearchBarView: View {
                                 .font(.system(size: 12))
                         }
                         .buttonStyle(.plain)
+                        
+                        Button("Advanced...") {
+                            withAnimation {
+                                showAdvancedFilters.toggle()
+                            }
+                            if showAdvancedFilters && !searchText.isEmpty {
+                                onSearch(searchText, searchScope)
+                            }
+                        }
+                        .buttonStyle(.borderless)
+                        .font(.caption)
                     }
                 }
                 .padding(.horizontal, 8)
@@ -83,8 +109,145 @@ struct SearchBarView: View {
                 
                 Spacer()
             }
+            
+            // Advanced filters section
+            if !searchText.isEmpty && showAdvancedFilters {
+                VStack(spacing: 12) {
+                    Text("Advanced Filters")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    // File type filter
+                    HStack {
+                        Text("File Type:")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        TextField("e.g., pdf", text: $fileTypeFilter)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 80)
+                            .disabled(isSearching)
+                            .onChange(of: fileTypeFilter) { _ in
+                                if !searchText.isEmpty {
+                                    onSearch(searchText, searchScope)
+                                }
+                            }
+                        Spacer()
+                    }
+                    
+                    // Size filter
+                    HStack {
+                        Text("Size:")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Picker("Op", selection: $sizeOperator) {
+                            ForEach(sizeOperators, id: \.self) { op in
+                                Text(op).tag(op)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .disabled(isSearching)
+                        .frame(width: 50)
+                        
+                        TextField("Value", value: $sizeValue, format: .number)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 60)
+                            .disabled(isSearching)
+                        
+                        Picker("Unit", selection: $sizeUnit) {
+                            ForEach(sizeUnits, id: \.self) { unit in
+                                Text(unit).tag(unit)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .disabled(isSearching)
+                        .frame(width: 60)
+                        
+                        .onChange(of: sizeOperator) { _ in
+                            if !searchText.isEmpty {
+                                onSearch(searchText, searchScope)
+                            }
+                        }
+                        .onChange(of: sizeValue) { _ in
+                            if !searchText.isEmpty {
+                                onSearch(searchText, searchScope)
+                            }
+                        }
+                        .onChange(of: sizeUnit) { _ in
+                            if !searchText.isEmpty {
+                                onSearch(searchText, searchScope)
+                            }
+                        }
+                        
+                        Spacer()
+                    }
+                    
+                    // Date filter
+                    HStack {
+                        Text("Date Modified:")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        DatePicker("From", selection: Binding(get: { dateFrom ?? Date.distantPast }, set: { dateFrom = $0 }), in: ...Date(), displayedComponents: .date)
+                            .datePickerStyle(.compact)
+                            .disabled(isSearching)
+                            .labelsHidden()
+                            .frame(width: 120)
+                            .onChange(of: dateFrom) { _ in
+                                if !searchText.isEmpty {
+                                    onSearch(searchText, searchScope)
+                                }
+                            }
+                        
+                        Text("To")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        DatePicker("To", selection: Binding(get: { dateTo ?? Date() }, set: { dateTo = $0 }), in: ...Date(), displayedComponents: .date)
+                            .datePickerStyle(.compact)
+                            .disabled(isSearching)
+                            .labelsHidden()
+                            .frame(width: 120)
+                            .onChange(of: dateTo) { _ in
+                                if !searchText.isEmpty {
+                                    onSearch(searchText, searchScope)
+                                }
+                            }
+                        
+                        Spacer()
+                    }
+                    
+                    // Regex and Content search toggles
+                    HStack {
+                        Toggle("Regex", isOn: $useRegex)
+                            .toggleStyle(.switch)
+                            .disabled(isSearching)
+                            .onChange(of: useRegex) { _ in
+                                if !searchText.isEmpty {
+                                    onSearch(searchText, searchScope)
+                                }
+                            }
+                        
+                        Toggle("Search in Content", isOn: $searchInContent)
+                            .toggleStyle(.switch)
+                            .disabled(isSearching)
+                            .onChange(of: searchInContent) { _ in
+                                if !searchText.isEmpty {
+                                    onSearch(searchText, searchScope)
+                                }
+                            }
+                        
+                        Spacer()
+                    }
+                }
+                .padding()
+                .background(Color(NSColor.controlBackgroundColor))
+                .cornerRadius(8)
+            }
         }
         .animation(.easeInOut(duration: 0.2), value: isSearching)
+        .animation(.easeInOut(duration: 0.2), value: searchText)
+        .animation(.easeInOut(duration: 0.2), value: showAdvancedFilters)
     }
 }
 
@@ -103,6 +266,14 @@ struct GlobalSearchView: View {
                     searchText: $searchText,
                     isSearching: $isSearching,
                     searchScope: $searchScope,
+                    fileTypeFilter: $fileManager.fileTypeFilter,
+                    sizeOperator: $fileManager.sizeOperator,
+                    sizeValue: $fileManager.sizeValue,
+                    sizeUnit: $fileManager.sizeUnit,
+                    dateFrom: $fileManager.dateFrom,
+                    dateTo: $fileManager.dateTo,
+                    useRegex: $fileManager.useRegex,
+                    searchInContent: $fileManager.searchInContent,
                     onSearch: { query, scope in
                         performSearch(query)
                     },
