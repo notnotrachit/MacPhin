@@ -63,8 +63,8 @@ struct FileIconView: View {
                 MarqueeOverlay(fileManager: fileManager)
             }
         }
-        .gesture(
-            DragGesture(minimumDistance: 5, coordinateSpace: .global)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 10, coordinateSpace: .global)
                 .onChanged { value in
                     handleDragChanged(value)
                 }
@@ -147,6 +147,7 @@ struct SmoothFileIconItemView: View {
     let item: FileItem
     @ObservedObject var fileManager: FileExplorerManager
     let isKeyboardSelected: Bool
+    @State private var lastClickTime: Date = Date.distantPast
     
     private var isSelected: Bool {
         fileManager.isItemSelected(item)
@@ -197,54 +198,78 @@ struct SmoothFileIconItemView: View {
     }
     
     var body: some View {
-        DraggableFileView(item: item, fileManager: fileManager) {
-            VStack(spacing: 0) {
-                // Thumbnail or icon - responsive size
-                if item.isDirectory {
-                    Image(systemName: item.icon)
-                        .font(fontSize)
-                        .foregroundColor(item.iconColor)
-                        .frame(width: iconSize.width, height: iconSize.height)
-                } else {
-                    FastThumbnailView(item: item)
-                        .frame(width: iconSize.width, height: iconSize.height)
-                }
-                
-                // File name - responsive
-                Text(item.name)
-                    .font(textFont)
-                    .lineLimit(1)
-                    .multilineTextAlignment(.center)
-                    .frame(width: itemWidth, height: 12, alignment: .top)
-                    .truncationMode(.middle)
-                    .clipped()
+        let content = VStack(spacing: 0) {
+            // Thumbnail or icon - responsive size
+            if item.isDirectory {
+                Image(systemName: item.icon)
+                    .font(fontSize)
+                    .foregroundColor(item.iconColor)
+                    .frame(width: iconSize.width, height: iconSize.height)
+            } else {
+                FastThumbnailView(item: item)
+                    .frame(width: iconSize.width, height: iconSize.height)
             }
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(0)
-            .background(backgroundColor)
-            .overlay(
-                isKeyboardSelected ? 
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.accentColor, lineWidth: 2) : nil
-            )
-            .cornerRadius(8)
-            .contentShape(Rectangle())
-            .onTapGesture(count: 2) {
+            
+            // File name - responsive
+            Text(item.name)
+                .font(textFont)
+                .lineLimit(1)
+                .multilineTextAlignment(.center)
+                .frame(width: itemWidth, height: 12, alignment: .top)
+                .truncationMode(.middle)
+                .clipped()
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(0)
+        .background(backgroundColor)
+        .overlay(
+            isKeyboardSelected ? 
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.accentColor, lineWidth: 2) : nil
+        )
+        .cornerRadius(8)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            let now = Date()
+            let timeSinceLastClick = now.timeIntervalSince(lastClickTime)
+            
+            if timeSinceLastClick < 0.5 {
+                // Double click - open item
                 fileManager.openItem(item)
+            } else {
+                // Single click - select item
+                let modifiers = NSApp.currentEvent?.modifierFlags ?? []
+                var eventModifiers: EventModifiers = []
+                if modifiers.contains(.command) { eventModifiers.insert(.command) }
+                if modifiers.contains(.shift) { eventModifiers.insert(.shift) }
+                if modifiers.contains(.option) { eventModifiers.insert(.option) }
+                if modifiers.contains(.control) { eventModifiers.insert(.control) }
+                
+                fileManager.selectItem(item, withModifiers: eventModifiers)
             }
-            .simultaneousGesture(
-                TapGesture()
-                    .onEnded { _ in
-                        let modifiers = NSApp.currentEvent?.modifierFlags ?? []
-                        var eventModifiers: EventModifiers = []
-                        if modifiers.contains(.command) { eventModifiers.insert(.command) }
-                        if modifiers.contains(.shift) { eventModifiers.insert(.shift) }
-                        if modifiers.contains(.option) { eventModifiers.insert(.option) }
-                        if modifiers.contains(.control) { eventModifiers.insert(.control) }
-                        
-                        fileManager.selectItem(item, withModifiers: eventModifiers)
+            
+            lastClickTime = now
+        }
+        
+        if fileManager.isItemSelected(item) {
+            content
+                .onDrag {
+                    // If multiple items are selected, create providers for all selected items
+                    if fileManager.selectedItems.count > 1 {
+                        let urls = fileManager.selectedItems.map { $0.url }
+                        let provider = NSItemProvider()
+                        provider.registerFileRepresentation(forTypeIdentifier: "public.file-url", fileOptions: [], visibility: .all) { completion in
+                            // For multiple items, we'll use the first item's URL as the primary
+                            completion(urls.first, true, nil)
+                            return nil
+                        }
+                        return provider
+                    } else {
+                        return NSItemProvider(object: item.url as NSURL)
                     }
-            )
+                }
+        } else {
+            content
         }
     }
 }
