@@ -80,6 +80,17 @@ class FileExplorerManager: ObservableObject {
     @Published var dragUnionMode: Bool = false // true when command is held during drag to union with existing selection
     @Published var debugMarquee: Bool = true
     
+    // Column width management for list view
+    @Published var columnWidths: [String: CGFloat] = [
+        "name": 300,
+        "dateModified": 150,
+        "type": 100,
+        "size": 100
+    ]
+    
+    private let minColumnWidth: CGFloat = 50
+    private let maxColumnWidth: CGFloat = 500
+    
     // Search debouncing
     private var searchTask: Task<Void, Never>?
     
@@ -1208,6 +1219,26 @@ class FileExplorerManager: ObservableObject {
         }
         
         return 0.0
+    }
+    
+    // MARK: - Column Width Management
+    
+    func setColumnWidth(_ column: String, width: CGFloat) {
+        let constrainedWidth = max(minColumnWidth, min(maxColumnWidth, width))
+        columnWidths[column] = constrainedWidth
+    }
+    
+    func getColumnWidth(_ column: String) -> CGFloat {
+        return columnWidths[column] ?? 100
+    }
+    
+    func resetColumnWidths() {
+        columnWidths = [
+            "name": 300,
+            "dateModified": 150,
+            "type": 100,
+            "size": 100
+        ]
     }
 }
 

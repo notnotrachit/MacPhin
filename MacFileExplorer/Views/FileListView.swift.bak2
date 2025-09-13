@@ -49,7 +49,7 @@ struct ResizableListHeaderView: View {
             )
         }
         .frame(height: 24)
-        .frame(width: fileManager.getColumnWidth("name"), alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(NSColor.controlBackgroundColor))
         .border(Color(NSColor.separatorColor), width: 0.5)
     }
@@ -354,7 +354,7 @@ struct SmoothFileListRowView: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
-                .frame(width: fileManager.getColumnWidth("name"), alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 
                 // Date modified
                 Text(item.dateModified, style: .date)
@@ -366,13 +366,13 @@ struct SmoothFileListRowView: View {
                 Text(item.isDirectory ? "Folder" : item.url.pathExtension.uppercased())
                     .font(.caption)
                     .foregroundColor(.secondary)
-                    .frame(width: fileManager.getColumnWidth("type"), alignment: .leading)
+                    .frame(width: 100, alignment: .leading)
                 
                 // Size
                 Text(item.displaySize)
                     .font(.caption)
                     .foregroundColor(.secondary)
-                    .frame(width: fileManager.getColumnWidth("size"), alignment: .trailing)
+                    .frame(width: 100, alignment: .trailing)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 2)
@@ -664,7 +664,7 @@ struct ListHeaderView: View {
                 }
             }
             .buttonStyle(.plain)
-            .frame(width: fileManager.getColumnWidth("name"), alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
             
             Button(action: { fileManager.setSortOption(.dateModified) }) {
                 HStack {
@@ -688,7 +688,7 @@ struct ListHeaderView: View {
                 }
             }
             .buttonStyle(.plain)
-            .frame(width: fileManager.getColumnWidth("type"), alignment: .leading)
+            .frame(width: 100, alignment: .leading)
             
             Button(action: { fileManager.setSortOption(.size) }) {
                 HStack {
@@ -700,7 +700,7 @@ struct ListHeaderView: View {
                 }
             }
             .buttonStyle(.plain)
-            .frame(width: fileManager.getColumnWidth("size"), alignment: .trailing)
+            .frame(width: 100, alignment: .trailing)
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
@@ -857,7 +857,7 @@ struct LegacyFileListView: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .frame(width: fileManager.getColumnWidth("name"), alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 
                 Button(action: { fileManager.setSortOption(.dateModified) }) {
                     HStack {
@@ -881,7 +881,7 @@ struct LegacyFileListView: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .frame(width: fileManager.getColumnWidth("type"), alignment: .leading)
+                .frame(width: 100, alignment: .leading)
                 
                 Button(action: { fileManager.setSortOption(.size) }) {
                     HStack {
@@ -893,7 +893,7 @@ struct LegacyFileListView: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .frame(width: fileManager.getColumnWidth("size"), alignment: .trailing)
+                .frame(width: 100, alignment: .trailing)
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
@@ -1050,7 +1050,7 @@ struct FileListRowView: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
-                .frame(width: fileManager.getColumnWidth("name"), alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 
                 // Date modified
                 Text(item.dateModified, style: .date)
@@ -1062,13 +1062,13 @@ struct FileListRowView: View {
                 Text(item.isDirectory ? "Folder" : item.url.pathExtension.uppercased())
                     .font(.caption)
                     .foregroundColor(.secondary)
-                    .frame(width: fileManager.getColumnWidth("type"), alignment: .leading)
+                    .frame(width: 100, alignment: .leading)
                 
                 // Size
                 Text(item.displaySize)
                     .font(.caption)
                     .foregroundColor(.secondary)
-                    .frame(width: fileManager.getColumnWidth("size"), alignment: .trailing)
+                    .frame(width: 100, alignment: .trailing)
             }
             .contentShape(Rectangle())
             .onTapGesture(count: 2) {

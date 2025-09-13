@@ -1,5 +1,157 @@
 import SwiftUI
 
+// MARK: - Resizable List Header Components
+
+struct ResizableListHeaderView: View {
+    @ObservedObject var fileManager: FileExplorerManager
+    @State private var dragOffset: CGFloat = 0
+    @State private var isDragging = false
+    @State private var draggedColumn: String? = nil
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            // Name column
+            ResizableColumnHeader(
+                title: "Name",
+                sortOption: .name,
+                fileManager: fileManager,
+                columnKey: "name",
+                width: fileManager.getColumnWidth("name"),
+                isFlexible: false
+            )
+            
+            // Date Modified column
+            ResizableColumnHeader(
+                title: "Date Modified",
+                sortOption: .dateModified,
+                fileManager: fileManager,
+                columnKey: "dateModified",
+                width: fileManager.getColumnWidth("dateModified")
+            )
+            
+            // Type column
+            ResizableColumnHeader(
+                title: "Type",
+                sortOption: .type,
+                fileManager: fileManager,
+                columnKey: "type",
+                width: fileManager.getColumnWidth("type")
+            )
+            
+            // Size column
+            ResizableColumnHeader(
+                title: "Size",
+                sortOption: .size,
+                fileManager: fileManager,
+                columnKey: "size",
+                width: fileManager.getColumnWidth("size"),
+                alignment: .trailing
+            )
+        }
+        .frame(height: 24)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(NSColor.controlBackgroundColor))
+        .border(Color(NSColor.separatorColor), width: 0.5)
+    }
+}
+
+struct ResizableColumnHeader: View {
+    let title: String
+    let sortOption: SortOption
+    @ObservedObject var fileManager: FileExplorerManager
+    let columnKey: String
+    let width: CGFloat
+    let isFlexible: Bool
+    let alignment: Alignment
+    
+    init(title: String, sortOption: SortOption, fileManager: FileExplorerManager, columnKey: String, width: CGFloat, isFlexible: Bool = false, alignment: Alignment = .leading) {
+        self.title = title
+        self.sortOption = sortOption
+        self.fileManager = fileManager
+        self.columnKey = columnKey
+        self.width = width
+        self.isFlexible = isFlexible
+        self.alignment = alignment
+    }
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            // Column content
+            Button(action: { fileManager.setSortOption(sortOption) }) {
+                HStack {
+                    Text(title)
+                    if fileManager.sortBy == sortOption {
+                        Image(systemName: fileManager.sortAscending ? "chevron.up" : "chevron.down")
+                            .font(.caption)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: alignment == .trailing ? .trailing : .leading)
+            }
+            .buttonStyle(.plain)
+            .frame(width: fileManager.getColumnWidth(columnKey), alignment: alignment)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            
+            // Resize handle (except for the last column)
+            if columnKey != "size" {
+                ResizeHandle(
+                    columnKey: columnKey,
+                    fileManager: fileManager
+                )
+            }
+        }
+    }
+}
+
+struct ResizeHandle: View {
+    let columnKey: String
+    @ObservedObject var fileManager: FileExplorerManager
+    
+    @State private var isHovering = false
+    @State private var initialWidth: CGFloat = 0
+    @State private var isDragging = false
+    
+    var body: some View {
+        Rectangle()
+            .fill((isHovering || isDragging) ? Color.accentColor.opacity(0.15) : Color.clear)
+            .frame(width: 16, height: 24)
+            .overlay(
+                Rectangle()
+                    .fill((isHovering || isDragging) ? Color.accentColor.opacity(0.7) : Color.clear)
+                    .frame(width: 2)
+            )
+            .contentShape(Rectangle())
+            .clipped()
+            .onHover { hovering in
+                isHovering = hovering
+            }
+            .onContinuousHover { phase in
+                switch phase {
+                case .active(_):
+                    NSCursor.resizeLeftRight.set()
+                case .ended:
+                    NSCursor.arrow.set()
+                }
+            }
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        if !isDragging {
+                            isDragging = true
+                            initialWidth = fileManager.getColumnWidth(columnKey)
+                        }
+                        let newWidth = max(50, min(500, initialWidth + value.translation.width))
+                        fileManager.setColumnWidth(columnKey, width: newWidth)
+                    }
+                    .onEnded { value in
+                        isDragging = false
+                        initialWidth = 0
+                    }
+            )
+    }
+}
+
+
 // MARK: - Optimized List View with Virtual Scrolling
 struct OptimizedFileListView: View {
     @ObservedObject var fileManager: FileExplorerManager
@@ -20,7 +172,7 @@ struct OptimizedFileListView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            ListHeaderView(fileManager: fileManager)
+            ResizableListHeaderView(fileManager: fileManager)
             
             // Optimized file list
             ZStack(alignment: .topLeading) {
@@ -278,7 +430,7 @@ struct OptimizedFileListRowView: View {
     
     var body: some View {
         DraggableFileView(item: item, fileManager: fileManager) {
-            HStack {
+            HStack(spacing: 0) {
                 // Icon/thumbnail and name
                 HStack(spacing: 8) {
                     if item.isDirectory {
@@ -293,25 +445,29 @@ struct OptimizedFileListRowView: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(width: fileManager.getColumnWidth("name"), alignment: .leading)
+                .padding(.horizontal, 8)
                 
                 // Date modified
                 Text(item.dateModified, style: .date)
                     .font(.caption)
                     .foregroundColor(.secondary)
-                    .frame(width: 150, alignment: .leading)
+                    .frame(width: fileManager.getColumnWidth("dateModified"), alignment: .leading)
+                    .padding(.horizontal, 8)
                 
                 // Type
                 Text(item.isDirectory ? "Folder" : item.url.pathExtension.uppercased())
                     .font(.caption)
                     .foregroundColor(.secondary)
-                    .frame(width: 100, alignment: .leading)
+                    .frame(width: fileManager.getColumnWidth("type"), alignment: .leading)
+                    .padding(.horizontal, 8)
                 
                 // Size
                 Text(item.displaySize)
                     .font(.caption)
                     .foregroundColor(.secondary)
-                    .frame(width: 100, alignment: .trailing)
+                    .frame(width: fileManager.getColumnWidth("size"), alignment: .trailing)
+                    .padding(.horizontal, 8)
             }
             .contentShape(Rectangle())
             .onTapGesture(count: 2) {
